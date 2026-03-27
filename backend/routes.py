@@ -4,7 +4,7 @@ from schemas import AutocompleteStrokeRequest, AutocompleteStrokeResponse
 from schemas import SendChatRequest, SendChatResponse
 from schemas import GenerateSongRequest, GenerateSongResponse
 from schemas import GenerateImageRequest, GenerateImageResponse
-import gemini_service
+import backend.services.gemini_service as gemini_service
 
 router = APIRouter(prefix="/api")
 
