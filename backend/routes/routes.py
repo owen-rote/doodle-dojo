@@ -1,9 +1,9 @@
 from fastapi import APIRouter
 
-from schemas import AutocompleteStrokeRequest, AutocompleteStrokeResponse
-from schemas import SendChatRequest, SendChatResponse
-from schemas import GenerateSongRequest, GenerateSongResponse
-from schemas import GenerateImageRequest, GenerateImageResponse
+from backend.schemas.schemas import AutocompleteStrokeRequest, AutocompleteStrokeResponse
+from backend.schemas.schemas import SendChatRequest, SendChatResponse
+from backend.schemas.schemas import GenerateSongRequest, GenerateSongResponse
+from backend.schemas.schemas import GenerateImageRequest, GenerateImageResponse
 import backend.services.gemini_service as gemini_service
 
 router = APIRouter(prefix="/api")

@@ -7,10 +7,10 @@ from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 
-from schemas import AutocompleteStrokeRequest, AutocompleteStrokeResponse
-from schemas import SendChatRequest, SendChatResponse
-from schemas import GenerateSongRequest, GenerateSongResponse
-from schemas import GenerateImageRequest, GenerateImageResponse
+from backend.schemas.schemas import AutocompleteStrokeRequest, AutocompleteStrokeResponse
+from backend.schemas.schemas import SendChatRequest, SendChatResponse
+from backend.schemas.schemas import GenerateSongRequest, GenerateSongResponse
+from backend.schemas.schemas import GenerateImageRequest, GenerateImageResponse
 
 load_dotenv(dotenv_path=Path(__file__).resolve().parent / ".env")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
