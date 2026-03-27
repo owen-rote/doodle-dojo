@@ -1,0 +1,1 @@
+Use UV for python dependencies
