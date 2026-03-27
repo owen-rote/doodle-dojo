@@ -33,7 +33,7 @@ async def generate_song(request: GenerateSongRequest) -> GenerateSongResponse:
         model="lyria-3-clip-preview",  # TODO: change from preview to pro for production. for now, cheaper but only 30 seconds
         contents=[prompt, Image.open(request.reference_url)],
         config=types.GenerateContentConfig(
-            response_modalities=["AUDIO", "TEXT"], 
+            response_modalities=["AUDIO", "TEXT"],
         ),
     )
 
@@ -70,9 +70,7 @@ async def generate_image(request: GenerateImageRequest) -> GenerateImageResponse
 
     # IMAGE PART (FIXED)
     if request.image_base64:
-        image_bytes = base64.b64decode(
-            extract_base64_data(request.image_base64)
-        )
+        image_bytes = base64.b64decode(extract_base64_data(request.image_base64))
 
         contents.append(
             types.Part.from_bytes(
@@ -83,10 +81,7 @@ async def generate_image(request: GenerateImageRequest) -> GenerateImageResponse
 
     # IMAGE-ONLY FALLBACK PROMPT
     if request.image_base64 and not request.prompt:
-        contents.append(
-            "Generate a reference image for drawing based on the provided image. "
-            "Keep it simple, abstract, and visually clear."
-        )
+        contents.append("Generate a reference image for drawing based on the provided image. " "Keep it simple, abstract, and visually clear.")
 
     response = await client.aio.models.generate_content(
         model="gemini-3.1-flash-image-preview",
