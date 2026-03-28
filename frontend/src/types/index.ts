@@ -1,6 +1,6 @@
 // --- Drawing Tools ---
 
-export type DrawingTool = "pen" | "brush" | "eraser";
+export type DrawingTool = "pen" | "brush" | "eraser" | "fill";
 
 // --- Feedback ---
 
