@@ -1,6 +1,0 @@
-[phases.setup]
-nixPkgs = ["nodejs_22", "python312", "curl", "cacert"]
-cmds = ["pip3 install uv"]
-
-[start]
-cmd = "./start.sh"
