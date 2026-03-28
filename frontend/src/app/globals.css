@@ -211,3 +211,26 @@ body {
   animation-delay: 1s;
   pointer-events: none;
 }
+
+/* ─── iPad / touch device GPU fix ───
+   Safari on iPadOS has a hard GPU memory limit. Too many
+   composited blur layers cause it to silently stop rendering.
+   Hide heavy decorative blur elements on touch devices. */
+
+@media (pointer: coarse) {
+  .glow-bg {
+    display: none !important;
+  }
+
+  .spotlight-beam,
+  .spotlight-beam-reverse,
+  .spotlight-glow {
+    display: none !important;
+  }
+
+  /* Force GPU repaint for image containers on iPadOS Safari */
+  img {
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+  }
+}

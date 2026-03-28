@@ -70,7 +70,7 @@ function Navbar() {
 function HeroSection() {
   return (
     <section className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden px-6 pt-16">
-      <div className="pointer-events-none absolute inset-0">
+      <div className="glow-bg pointer-events-none absolute inset-0">
         <div className="absolute left-1/2 top-1/2 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 animate-[pulse_6s_ease-in-out_infinite] rounded-full bg-purple-600/20 blur-[120px]" />
         <div className="absolute left-1/3 top-1/3 h-[400px] w-[400px] -translate-x-1/2 -translate-y-1/2 animate-[pulse_8s_ease-in-out_infinite_1s] rounded-full bg-violet-500/10 blur-[100px]" />
       </div>
@@ -191,7 +191,7 @@ function LoadingScreen({ progress, messageIndex }: { progress: number; messageIn
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#0a0a0f]">
       {/* Animated background orbs */}
-      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+      <div className="glow-bg pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute left-1/2 top-1/2 h-[500px] w-[500px] -translate-x-1/2 -translate-y-1/2 animate-[pulse_3s_ease-in-out_infinite] rounded-full bg-purple-600/20 blur-[120px]" />
         <div className="absolute left-1/4 top-1/3 h-[300px] w-[300px] -translate-x-1/2 -translate-y-1/2 animate-[pulse_4s_ease-in-out_infinite_0.5s] rounded-full bg-violet-500/15 blur-[100px]" />
         <div className="absolute right-1/4 bottom-1/3 h-[250px] w-[250px] animate-[pulse_5s_ease-in-out_infinite_1s] rounded-full bg-pink-500/10 blur-[80px]" />
@@ -443,7 +443,7 @@ function StartDrawingSection() {
                 {/* Input: Original image */}
                 <div className="flex w-[200px] shrink-0 flex-col items-center">
                   <div className="relative w-full overflow-hidden rounded-2xl border border-dashed border-white/20 bg-white/[0.03] p-3">
-                    <div className="absolute left-3 top-3 z-10 rounded-md bg-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-white/50 backdrop-blur-sm">
+                    <div className="absolute left-3 top-3 z-10 rounded-md bg-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-white/50">
                       Input
                     </div>
                     <img
@@ -469,7 +469,7 @@ function StartDrawingSection() {
                   <div className="flex flex-col items-center">
                     <button
                       onClick={() => handleStyleSelect("bw")}
-                      className={`relative w-full overflow-hidden rounded-2xl border-2 p-3 backdrop-blur-md transition-all duration-300 ${
+                      className={`relative w-full overflow-hidden rounded-2xl border-2 p-3 transition-all duration-300 ${
                         selectedStyle === "bw"
                           ? "border-purple-500 bg-purple-500/10 shadow-[0_0_30px_rgba(168,85,247,0.2)]"
                           : "border-white/10 bg-white/5 hover:border-purple-500/40"
@@ -497,7 +497,7 @@ function StartDrawingSection() {
                   <div className="flex flex-col items-center">
                     <button
                       onClick={() => handleStyleSelect("colored")}
-                      className={`relative w-full overflow-hidden rounded-2xl border-2 p-3 backdrop-blur-md transition-all duration-300 ${
+                      className={`relative w-full overflow-hidden rounded-2xl border-2 p-3 transition-all duration-300 ${
                         selectedStyle === "colored"
                           ? "border-purple-500 bg-purple-500/10 shadow-[0_0_30px_rgba(168,85,247,0.2)]"
                           : "border-white/10 bg-white/5 hover:border-purple-500/40"
@@ -584,7 +584,7 @@ function StartDrawingSection() {
 
               {/* Content card */}
               <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-8 backdrop-blur-md">
-                <div className="pointer-events-none absolute inset-0 -z-10">
+                <div className="glow-bg pointer-events-none absolute inset-0 -z-10">
                   <div className="absolute left-1/2 top-1/2 h-[200px] w-[200px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-purple-600/10 blur-[60px]" />
                 </div>
 
@@ -775,7 +775,7 @@ function AboutSection() {
         ref={ref}
         className="relative mx-auto max-w-3xl overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-12 text-center opacity-0 translate-y-8 backdrop-blur-md transition-all duration-700 ease-out"
       >
-        <div className="pointer-events-none absolute inset-0 -z-10">
+        <div className="glow-bg pointer-events-none absolute inset-0 -z-10">
           <div className="absolute left-1/2 top-1/2 h-[300px] w-[300px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-purple-600/15 blur-[80px]" />
         </div>
         <h2 className="text-3xl font-bold text-white lg:text-4xl">Ready to start drawing?</h2>
