@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import type Konva from "konva";
 import type { DrawingTool, Stroke } from "@/types";
 
 interface CanvasState {
@@ -9,6 +10,7 @@ interface CanvasState {
   currentStroke: number[];
   isDrawing: boolean;
   strokeHistory: Stroke[][];
+  stage: Konva.Stage | null;
 
   setTool: (tool: DrawingTool) => void;
   setBrushSize: (size: number) => void;
@@ -17,6 +19,7 @@ interface CanvasState {
   finishStroke: () => void;
   undo: () => void;
   clearCanvas: () => void;
+  setStage: (stage: Konva.Stage | null) => void;
 }
 
 export const useCanvasStore = create<CanvasState>((set, get) => ({
@@ -27,6 +30,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
   currentStroke: [],
   isDrawing: false,
   strokeHistory: [],
+  stage: null,
 
   setTool: (tool) => set({ activeTool: tool }),
   setBrushSize: (size) => set({ brushSize: size }),
@@ -72,4 +76,6 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
 
   clearCanvas: () =>
     set({ userStrokes: [], currentStroke: [], strokeHistory: [] }),
+
+  setStage: (stage) => set({ stage }),
 }));

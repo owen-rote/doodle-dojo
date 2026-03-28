@@ -1,9 +1,10 @@
 "use client";
 
 import { useRef, useEffect, useState, useCallback } from "react";
-import { Stage, Layer, Line } from "react-konva";
+import { Stage, Layer, Line, Circle } from "react-konva";
 import type Konva from "konva";
 import { useCanvasStore } from "@/stores/canvasStore";
+import { GUIDE_POINTS, GUIDE_POINT_RADIUS } from "@/lib/random_points";
 
 function effectiveWidth(tool: string, base: number): number {
   if (tool === "brush") return base * 2.5;
@@ -25,8 +26,10 @@ export default function DrawingCanvas() {
     startDrawing,
     addPoint,
     finishStroke,
+    setStage,
   } = useCanvasStore();
 
+  // Track canvas container size
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -37,6 +40,14 @@ export default function DrawingCanvas() {
     observer.observe(el);
     return () => observer.disconnect();
   }, []);
+
+  // Register the Konva stage in canvasStore so the live hook can capture frames
+  useEffect(() => {
+    if (stageRef.current) {
+      setStage(stageRef.current);
+    }
+    return () => setStage(null);
+  }, [size, setStage]);
 
   const getPointerPos = useCallback(() => {
     const stage = stageRef.current;
@@ -68,7 +79,7 @@ export default function DrawingCanvas() {
     <div ref={containerRef} className="relative h-full w-full">
       {!hasContent && size.width > 0 && (
         <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
-          <span className="text-[18px] text-gray-400">Start drawing here...</span>
+          <span className="text-[18px] text-gray-400">Connect the dots...</span>
         </div>
       )}
 
@@ -85,6 +96,20 @@ export default function DrawingCanvas() {
           onTouchEnd={handleMouseUp}
           style={{ cursor: activeTool === "eraser" ? "crosshair" : "default" }}
         >
+          {/* Guide dots — rendered first so strokes appear on top */}
+          <Layer listening={false}>
+            {GUIDE_POINTS.map((pt, i) => (
+              <Circle
+                key={i}
+                x={pt.xRatio * size.width}
+                y={pt.yRatio * size.height}
+                radius={GUIDE_POINT_RADIUS}
+                fill="#a855f7"
+                opacity={0.75}
+              />
+            ))}
+          </Layer>
+
           {/* Completed strokes */}
           <Layer>
             {userStrokes.map((stroke) => (

@@ -1,14 +1,20 @@
 "use client";
 
 import { useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { useCoachStore } from "@/stores/coachStore";
 import { useSessionStore } from "@/stores/sessionStore";
 import CoachFeedback from "./CoachFeedback";
 import ChatInput from "./ChatInput";
 import VoiceToggle from "./VoiceToggle";
 
-export default function ReferencePanel() {
-  const { messages, voiceEnabled, toggleVoice } = useCoachStore();
+interface ReferencePanelProps {
+  onBeforeVoiceEnable?: () => void;
+}
+
+export default function ReferencePanel({ onBeforeVoiceEnable }: ReferencePanelProps) {
+  const { messages, voiceEnabled, toggleVoice, liveConnectionState, liveMessage } =
+    useCoachStore();
   const { referenceImageUrl } = useSessionStore();
   const [modalOpen, setModalOpen] = useState(false);
 
@@ -42,7 +48,65 @@ export default function ReferencePanel() {
       <ChatInput onSend={(msg) => console.log("Chat:", msg)} />
 
       {/* Voice Toggle */}
-      <VoiceToggle isEnabled={voiceEnabled} onToggle={toggleVoice} />
+      <VoiceToggle
+        isEnabled={voiceEnabled}
+        onToggle={toggleVoice}
+        onBeforeVoiceEnable={onBeforeVoiceEnable}
+      />
+
+      {/* Live feedback text box — shown below voice toggle when voice is OFF */}
+      {!voiceEnabled && (
+        <div className="rounded-lg border border-white/10 bg-white/5 p-3 min-h-[64px]">
+          <div className="mb-1.5 flex items-center gap-1.5">
+            <div
+              className={`h-1.5 w-1.5 rounded-full ${
+                liveConnectionState === "live"
+                  ? "animate-pulse bg-emerald-400"
+                  : liveConnectionState === "connecting"
+                    ? "animate-pulse bg-yellow-400"
+                    : liveConnectionState === "error"
+                      ? "bg-red-400"
+                      : "bg-white/20"
+              }`}
+            />
+            <span className="text-[11px] text-white/30">
+              {liveConnectionState === "live"
+                ? "Live"
+                : liveConnectionState === "connecting"
+                  ? "Connecting…"
+                  : liveConnectionState === "error"
+                    ? "Disconnected"
+                    : "Offline"}
+            </span>
+          </div>
+          <AnimatePresence mode="wait">
+            {liveMessage ? (
+              <motion.p
+                key={liveMessage}
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="text-[13px] leading-snug text-white/70"
+              >
+                {liveMessage}
+              </motion.p>
+            ) : (
+              <motion.p
+                key="empty"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="text-[13px] text-white/25"
+              >
+                {liveConnectionState === "live"
+                  ? "Draw to get feedback…"
+                  : "Waiting for AI coach…"}
+              </motion.p>
+            )}
+          </AnimatePresence>
+        </div>
+      )}
 
       {/* Reference Image Modal */}
       {modalOpen && referenceImageUrl && (

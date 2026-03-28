@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { useCanvasStore } from "@/stores/canvasStore";
 import { useSessionStore } from "@/stores/sessionStore";
 import { mockStrokePlan } from "@/lib/mockStrokePlan";
+import { useGeminiLiveSession } from "@/hooks/useGeminiLiveSession";
 import SessionHeader from "./SessionHeader";
 import ReferencePanel from "./ReferencePanel";
 import ToolBar from "./ToolBar";
@@ -22,6 +23,7 @@ export default function DrawingSession() {
   const { progress, sessionTitle, resetSession, setSession } = useSessionStore();
 
   const referenceImageUrl = useSessionStore((s) => s.referenceImageUrl);
+  const { prepareVoicePlayback } = useGeminiLiveSession();
 
   // Load mock data only if no reference image was set from the home page
   useEffect(() => {
@@ -58,7 +60,7 @@ export default function DrawingSession() {
       />
 
       <div className="flex flex-1 overflow-hidden">
-        <ReferencePanel />
+        <ReferencePanel onBeforeVoiceEnable={prepareVoicePlayback} />
 
         <main className="relative flex flex-1 flex-col p-5">
           {/* Ambient glow behind canvas */}

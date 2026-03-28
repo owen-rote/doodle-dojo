@@ -178,7 +178,7 @@ Generate and output the image now. The output should look like a simple colored 
 const GEMINI_MODEL = "gemini-3.1-flash-image-preview"; // Nano Banana 2
 
 export async function POST(request: NextRequest) {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
   if (!apiKey) {
     return NextResponse.json(
       { error: "GEMINI_API_KEY not configured" },
