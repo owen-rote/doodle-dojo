@@ -1,17 +1,18 @@
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
-from pathlib import Path
-
-from backend.routes.routes import router
+import uvicorn
+from routes.routes import router
 
 
 load_dotenv(dotenv_path=Path(__file__).resolve().parent / ".env")
 
 
 app = FastAPI(
-    title="Doodle Dev Backend",
-    description="Doodle Dev Backend",
+    title="Bloom Backend",
+    description="Bloom Backend",
     version="0.1.0",
 )
 
@@ -26,6 +27,4 @@ app.include_router(router)
 
 
 if __name__ == "__main__":
-    import uvicorn
-
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

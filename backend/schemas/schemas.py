@@ -67,6 +67,27 @@ class GenerateImageResponse(BaseModel):
 
 # =====================================================================
 
+# ============== Stroke drawing instructions (Gemini 3 + reference) ====
+class StrokeDrawingInstructionsRequest(BaseModel):
+    """Each stroke is [x1,y1,x2,y2,...,xn,yn]; reference is data URL or raw base64."""
+
+    stroke_points: list[list[float]]
+    reference_url: str = ""
+
+    @model_validator(mode="after")
+    def require_reference(self):
+        if not self.reference_url or not str(self.reference_url).strip():
+            raise ValueError("reference_url is required (data URL or base64).")
+        return self
+
+
+class StrokeDrawingInstructionsResponse(BaseModel):
+    instructions: list[str] = []
+    message: str = ""
+
+
+# =====================================================================
+
 # ============== Generate Video ========================================
 
 

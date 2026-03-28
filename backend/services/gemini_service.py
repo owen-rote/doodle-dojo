@@ -11,8 +11,13 @@ from schemas.schemas import AutocompleteStrokeRequest, AutocompleteStrokeRespons
 from schemas.schemas import SendChatRequest, SendChatResponse
 from schemas.schemas import GenerateSongRequest, GenerateSongResponse
 from schemas.schemas import GenerateImageRequest, GenerateImageResponse
+from schemas.schemas import StrokeDrawingInstructionsRequest, StrokeDrawingInstructionsResponse
 
-load_dotenv(dotenv_path=Path(__file__).resolve().parent / ".env")
+from services.stroke_instruction_helpers import bullet_lines_from_model_text
+from services.stroke_instruction_helpers import format_stroke_points_for_prompt
+
+_BACKEND_ROOT = Path(__file__).resolve().parent.parent
+load_dotenv(dotenv_path=_BACKEND_ROOT / ".env")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 client = genai.Client(api_key=GEMINI_API_KEY)
 
@@ -54,6 +59,52 @@ def extract_base64_data(data_url: str) -> str:
     if data_url.startswith("data:"):
         return data_url.split(",", 1)[1]
     return data_url
+
+
+def mime_type_from_data_url(data_url: str) -> str:
+    if not data_url.startswith("data:"):
+        return "image/png"
+    meta = data_url.split(",", 1)[0]
+    rest = meta[5:] if meta.startswith("data:") else meta
+    if ";" in rest:
+        return rest.split(";", 1)[0] or "image/png"
+    return rest or "image/png"
+
+
+STROKE_INSTRUCTIONS_MODEL = "gemini-3-flash-preview"
+
+
+async def generate_stroke_drawing_instructions(
+    request: StrokeDrawingInstructionsRequest,
+) -> StrokeDrawingInstructionsResponse:
+    stroke_text = format_stroke_points_for_prompt(request.stroke_points)
+    prompt = (
+        "You are a drawing instructor. The artist is working from a reference image and has "
+        "recorded stroke polylines on a canvas (each stroke is an ordered sequence of (x, y) points).\n\n"
+        "Use the reference image to interpret what each stroke should represent (shape, contour, detail).\n\n"
+        "Stroke data:\n"
+        f"{stroke_text}\n\n"
+        "Task: Write concise bullet-point instructions for how to draw these strokes so they match the "
+        "reference—cover stroke order if it matters, direction of movement, curvature and corners, "
+        "and suggested line weight or pressure where helpful.\n"
+        "Output only a bullet list (use '- ' at the start of each line). No title or preamble."
+    )
+
+    raw_ref = request.reference_url.strip()
+    image_bytes = base64.b64decode(extract_base64_data(raw_ref))
+    mime = mime_type_from_data_url(raw_ref)
+
+    response = await client.aio.models.generate_content(
+        model=STROKE_INSTRUCTIONS_MODEL,
+        contents=[
+            prompt,
+            types.Part.from_bytes(data=image_bytes, mime_type=mime),
+        ],
+    )
+
+    raw_text = (response.text or "").strip()
+    instructions = bullet_lines_from_model_text(raw_text)
+    return StrokeDrawingInstructionsResponse(instructions=instructions, message=raw_text)
 
 
 async def generate_image(request: GenerateImageRequest) -> GenerateImageResponse:

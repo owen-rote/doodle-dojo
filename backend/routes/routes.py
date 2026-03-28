@@ -1,10 +1,11 @@
 from fastapi import APIRouter
 
-from backend.schemas.schemas import AutocompleteStrokeRequest, AutocompleteStrokeResponse
-from backend.schemas.schemas import SendChatRequest, SendChatResponse
-from backend.schemas.schemas import GenerateSongRequest, GenerateSongResponse
-from backend.schemas.schemas import GenerateImageRequest, GenerateImageResponse
-import backend.services.gemini_service as gemini_service
+from schemas.schemas import AutocompleteStrokeRequest, AutocompleteStrokeResponse
+from schemas.schemas import SendChatRequest, SendChatResponse
+from schemas.schemas import GenerateSongRequest, GenerateSongResponse
+from schemas.schemas import GenerateImageRequest, GenerateImageResponse
+from schemas.schemas import StrokeDrawingInstructionsRequest, StrokeDrawingInstructionsResponse
+import services.gemini_service as gemini_service
 
 router = APIRouter(prefix="/api")
 
@@ -58,3 +59,15 @@ async def generate_image(body: GenerateImageRequest) -> GenerateImageResponse:
     """Generate a reference image for the given drawing prompt."""
     response = await gemini_service.generate_image(body)
     return response
+
+
+@router.post(
+    "/stroke_drawing_instructions",
+    response_model=StrokeDrawingInstructionsResponse,
+    summary="Bullet instructions for drawing recorded strokes vs reference",
+)
+async def stroke_drawing_instructions(
+    body: StrokeDrawingInstructionsRequest,
+) -> StrokeDrawingInstructionsResponse:
+    """Given canvas polylines and a reference image, return how to draw those strokes (Gemini 3 Flash)."""
+    return await gemini_service.generate_stroke_drawing_instructions(body)
