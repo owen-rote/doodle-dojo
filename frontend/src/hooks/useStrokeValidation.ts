@@ -3,9 +3,9 @@ import type { ValidationResult } from "@/types";
 
 // ─── Pixel-based Fréchet distance thresholds (tweak these easily) ───
 /** PASS: distance ≤ this → advance to next stroke */
-export const PASS_THRESHOLD = 120;
+export const PASS_THRESHOLD = 200;
 /** RETRY: distance ≤ this → "Almost! Try again" */
-export const RETRY_THRESHOLD = 200;
+export const RETRY_THRESHOLD = 350;
 /** FAIL: distance > RETRY_THRESHOLD → show guidance */
 
 export function useStrokeValidation() {

@@ -2,6 +2,9 @@ import { create } from "zustand";
 import type Konva from "konva";
 import type { DrawingTool, Stroke } from "@/types";
 
+/** Minimum distance (px) between consecutive points for smooth strokes. */
+const MIN_POINT_DISTANCE = 5;
+
 interface CanvasSnapshot {
   userStrokes: Stroke[];
   fillImageUrl: string | null;
@@ -51,9 +54,18 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
     set({ currentStroke: [x, y], isDrawing: true }),
 
   addPoint: (x, y) =>
-    set((state) => ({
-      currentStroke: [...state.currentStroke, x, y],
-    })),
+    set((state) => {
+      const pts = state.currentStroke;
+      // Skip points too close to the last one — reduces jaggedness
+      if (pts.length >= 2) {
+        const dx = x - pts[pts.length - 2];
+        const dy = y - pts[pts.length - 1];
+        if (dx * dx + dy * dy < MIN_POINT_DISTANCE * MIN_POINT_DISTANCE) {
+          return state;
+        }
+      }
+      return { currentStroke: [...pts, x, y] };
+    }),
 
   finishStroke: () => {
     const { currentStroke, activeTool, brushSize, fillColor, userStrokes, fillImageUrl, history } = get();

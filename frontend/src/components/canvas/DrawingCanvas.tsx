@@ -333,7 +333,8 @@ export default function DrawingCanvas() {
                 points={stroke.points}
                 stroke={stroke.color}
                 strokeWidth={effectiveWidth(stroke.tool, stroke.size)}
-                tension={0.5}
+                tension={0.35}
+                bezier
                 lineCap="round"
                 lineJoin="round"
                 globalCompositeOperation={
@@ -347,7 +348,8 @@ export default function DrawingCanvas() {
                 points={currentStroke}
                 stroke={currentStrokeColor}
                 strokeWidth={effectiveWidth(activeTool, brushSize)}
-                tension={0.5}
+                tension={0.35}
+                bezier
                 lineCap="round"
                 lineJoin="round"
                 globalCompositeOperation={
