@@ -1,3 +1,7 @@
+# Our stuff
+
+layer_*.*
+
 .venv/
 .env
 env/
