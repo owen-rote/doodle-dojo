@@ -359,12 +359,12 @@ function StartDrawingSection() {
           mode: params.inputType,
         });
 
-        // TODO: Send reference image to backend
-        // await fetch("/api/backend/upload-reference", {
-        //   method: "POST",
-        //   headers: { "Content-Type": "application/json" },
-        //   body: JSON.stringify({ image: data.image, mimeType: data.mimeType }),
-        // });
+        // Send reference image to backend (non-blocking — don't delay navigation)
+        fetch("/api/upload-reference", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ image: data.image, mimeType: data.mimeType }),
+        }).catch((err) => console.error("Backend upload failed:", err));
 
         // Complete the progress bar and navigate
         setLoadingProgress(100);
