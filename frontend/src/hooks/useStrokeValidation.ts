@@ -1,12 +1,44 @@
 import { useCallback } from "react";
+import { polylineLength } from "@/lib/guideScaling";
 import type { ValidationResult } from "@/types";
 
-// ─── Pixel-based Fréchet distance thresholds (tweak these easily) ───
-/** PASS: distance ≤ this → advance to next stroke */
-export const PASS_THRESHOLD = 200;
-/** RETRY: distance ≤ this → "Almost! Try again" */
-export const RETRY_THRESHOLD = 350;
-/** FAIL: distance > RETRY_THRESHOLD → show guidance */
+// ─── Relative thresholds (fraction of guide stroke length) ───
+const DEFAULT_PASS_RATIO = 0.12; // 12% deviation → pass
+const DEFAULT_RETRY_RATIO = 0.20; // 20% deviation → retry
+// anything above retry → fail
+
+// Minimum pixel thresholds so very short strokes aren't impossibly strict
+const MIN_PASS_PX = 30;
+const MIN_RETRY_PX = 50;
+
+export interface StrokeThresholds {
+  pass: number; // pixels
+  retry: number; // pixels
+}
+
+/**
+ * Compute pixel thresholds for a guide stroke.
+ * Uses per-stroke `tolerance` if provided, otherwise derives from stroke length.
+ */
+export function computeThresholds(
+  scaledGuideFlat: number[],
+  tolerance?: number
+): StrokeThresholds {
+  if (tolerance && tolerance > 0) {
+    // Per-stroke tolerance from StrokeData: treat as pass threshold (pixels),
+    // retry is 1.6× pass (same ratio as default 0.20/0.12 ≈ 1.67)
+    return {
+      pass: Math.max(MIN_PASS_PX, tolerance),
+      retry: Math.max(MIN_RETRY_PX, tolerance * 1.6),
+    };
+  }
+
+  const strokeLen = polylineLength(scaledGuideFlat);
+  return {
+    pass: Math.max(MIN_PASS_PX, strokeLen * DEFAULT_PASS_RATIO),
+    retry: Math.max(MIN_RETRY_PX, strokeLen * DEFAULT_RETRY_RATIO),
+  };
+}
 
 export function useStrokeValidation() {
   /** Euclidean distance between two points */
@@ -24,7 +56,6 @@ export function useStrokeValidation() {
 
       if (pLen === 0 || qLen === 0) return Infinity;
 
-      // DP table
       const ca: number[][] = Array.from({ length: pLen }, () =>
         Array(qLen).fill(-1)
       );
@@ -60,49 +91,37 @@ export function useStrokeValidation() {
     [dist]
   );
 
-  /** Validate a user stroke against a guide stroke */
+  /** Validate a user stroke against a scaled guide stroke */
   const validateStroke = useCallback(
     (
-      userStroke: number[],
-      guideStrokeNormalized: number[],
-      tolerance: number,
-      canvasSize: { width: number; height: number }
+      userStrokeFlat: number[],
+      scaledGuideFlat: number[],
+      tolerance?: number
     ): ValidationResult => {
-      // Scale guide from 0–1 to canvas coordinates (uniform scale with 10px padding)
-      const PADDING = 10;
-      const uniformScale = Math.min(
-        canvasSize.width - PADDING * 2,
-        canvasSize.height - PADDING * 2
-      );
-      const offsetX = (canvasSize.width - uniformScale) / 2;
-      const offsetY = (canvasSize.height - uniformScale) / 2;
-      const scaledGuide = guideStrokeNormalized.map((val, i) =>
-        i % 2 === 0 ? val * uniformScale + offsetX : val * uniformScale + offsetY
-      );
-
-      const distance = frechetDistance(userStroke, scaledGuide);
+      const thresholds = computeThresholds(scaledGuideFlat, tolerance);
+      const distance = frechetDistance(userStrokeFlat, scaledGuideFlat);
       const accuracy = Math.max(
         0,
-        Math.min(100, 100 - (distance / tolerance) * 50)
+        Math.min(100, 100 - (distance / thresholds.pass) * 50)
       );
 
-      if (distance <= tolerance) {
+      if (distance <= thresholds.pass) {
         return {
           status: "pass",
           accuracy,
           message: "Great job! Moving to the next stroke.",
         };
-      } else if (distance <= tolerance * 1.5) {
+      } else if (distance <= thresholds.retry) {
         return {
           status: "retry",
           accuracy,
-          message: "Close! Try to follow the curve more closely.",
+          message: "Almost! Try again.",
         };
       } else {
         return {
           status: "fail",
           accuracy,
-          message: "Let's try that stroke again.",
+          message: "Follow the dotted line more closely.",
         };
       }
     },

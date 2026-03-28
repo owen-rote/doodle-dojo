@@ -3,11 +3,12 @@
 import { useEffect, useRef } from "react";
 import { useCanvasStore } from "@/stores/canvasStore";
 import { useSessionStore } from "@/stores/sessionStore";
-import { useStrokeValidation, PASS_THRESHOLD, RETRY_THRESHOLD } from "./useStrokeValidation";
+import { useStrokeValidation } from "./useStrokeValidation";
+import { computeUniformLayout, scaleGuidePoints } from "@/lib/guideScaling";
 
 export function useStrokeGuide() {
   const loadedRef = useRef(false);
-  const { frechetDistance } = useStrokeValidation();
+  const { validateStroke } = useStrokeValidation();
 
   useEffect(() => {
     const strokes = useSessionStore.getState().guideStrokes;
@@ -32,6 +33,7 @@ export function useStrokeGuide() {
           guideStrokes,
           guideImageWidth,
           guideImageHeight,
+          strokePlan,
           markStrokeComplete,
           advanceToNextStroke,
           setValidationMessage,
@@ -45,42 +47,37 @@ export function useStrokeGuide() {
         const { stage } = canvasState;
         if (!stage) return;
 
-        const canvasWidth = stage.width();
-        const canvasHeight = stage.height();
+        // Use shared scaling (single source of truth)
+        const layout = computeUniformLayout(
+          stage.width(),
+          stage.height(),
+          guideImageWidth,
+          guideImageHeight
+        );
+        if (!layout) return;
 
-        // Uniform scaling (must match DrawingCanvas uniformLayout logic)
-        const scaleX = canvasWidth / guideImageWidth;
-        const scaleY = canvasHeight / guideImageHeight;
-        const scale = Math.min(scaleX, scaleY);
-        const offsetX = (canvasWidth - guideImageWidth * scale) / 2;
-        const offsetY = (canvasHeight - guideImageHeight * scale) / 2;
-
-        // Convert guide points to flat array in canvas coords
         const guideStroke = guideStrokes[currentStrokeIndex];
-        const scaledGuideFlat: number[] = [];
-        for (const [x, y] of guideStroke.points) {
-          scaledGuideFlat.push(x * scale + offsetX, y * scale + offsetY);
-        }
+        const scaledGuideFlat = scaleGuidePoints(guideStroke.points, layout);
 
-        // Compute Fréchet distance (pixels)
-        const distance = frechetDistance(userStroke.points, scaledGuideFlat);
+        // Read per-stroke tolerance from stroke plan if available
+        const strokePlanData = strokePlan?.strokes?.[currentStrokeIndex];
+        const tolerance = strokePlanData?.tolerance;
 
-        if (distance <= PASS_THRESHOLD) {
-          // PASS — keep user stroke, hide guide, advance to next
+        const result = validateStroke(userStroke.points, scaledGuideFlat, tolerance);
+
+        if (result.status === "pass") {
           markStrokeComplete(currentStrokeIndex);
           advanceToNextStroke();
-        } else if (distance <= RETRY_THRESHOLD) {
-          // RETRY — "Almost! Try again", clear user stroke, keep guide
+        } else if (result.status === "retry") {
           const failedStrokeId = userStroke.id;
-          setValidationMessage("Almost! Try again");
+          setValidationMessage(result.message);
           setTimeout(() => {
             useCanvasStore.getState().removeStrokeById(failedStrokeId);
             useSessionStore.getState().setValidationMessage(null);
           }, 1200);
         } else {
-          // FAIL — show guidance, clear user stroke, keep guide
           const failedStrokeId = userStroke.id;
-          setValidationMessage("Follow the dotted line more closely");
+          setValidationMessage(result.message);
           setTimeout(() => {
             useCanvasStore.getState().removeStrokeById(failedStrokeId);
             useSessionStore.getState().setValidationMessage(null);
@@ -88,5 +85,5 @@ export function useStrokeGuide() {
         }
       }
     });
-  }, [frechetDistance]);
+  }, [validateStroke]);
 }

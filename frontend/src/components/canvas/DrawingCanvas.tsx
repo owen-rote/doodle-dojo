@@ -5,6 +5,7 @@ import { Stage, Layer, Line, Circle, Image as KonvaImage } from "react-konva";
 import type Konva from "konva";
 import { useCanvasStore } from "@/stores/canvasStore";
 import { useSessionStore } from "@/stores/sessionStore";
+import { computeUniformLayout, scaleGuidePoints } from "@/lib/guideScaling";
 
 function effectiveWidth(tool: string, base: number): number {
   if (tool === "brush") return base * 2.5;
@@ -143,25 +144,14 @@ export default function DrawingCanvas() {
 
   const validationMessage = useSessionStore((s) => s.validationMessage);
 
-  // Uniform scale + centering to preserve aspect ratio
-  const uniformLayout = (() => {
-    if (!guideImageWidth || !guideImageHeight || !size.width || !size.height) return null;
-    const scaleX = size.width / guideImageWidth;
-    const scaleY = size.height / guideImageHeight;
-    const scale = Math.min(scaleX, scaleY);
-    const drawWidth = guideImageWidth * scale;
-    const drawHeight = guideImageHeight * scale;
-    const offsetX = (size.width - drawWidth) / 2;
-    const offsetY = (size.height - drawHeight) / 2;
-    return { scale, offsetX, offsetY, drawWidth, drawHeight };
-  })();
+  // Uniform scale + centering to preserve aspect ratio (shared with validation)
+  const uniformLayout = computeUniformLayout(size.width, size.height, guideImageWidth, guideImageHeight);
 
   // Current stroke's guide dots, scaled with uniform aspect ratio
   const guideDots = (() => {
     const stroke = guideStrokes[currentStrokeIndex];
     if (!stroke || !uniformLayout) return [];
-    const { scale, offsetX, offsetY } = uniformLayout;
-    return stroke.points.map(([x, y]) => ({ x: x * scale + offsetX, y: y * scale + offsetY }));
+    return scaleGuidePoints(stroke.points, uniformLayout);
   })();
 
   // Track canvas container size
@@ -299,10 +289,10 @@ export default function DrawingCanvas() {
           style={{ cursor }}
         >
           {/* Guide stroke as a dotted line */}
-          {guideDots.length > 1 && (
+          {guideDots.length >= 4 && (
             <Layer listening={false}>
               <Line
-                points={guideDots.flatMap((d) => [d.x, d.y])}
+                points={guideDots}
                 stroke="#9CA3AF"
                 strokeWidth={3}
                 dash={[6, 6]}
