@@ -3,6 +3,8 @@ import io
 import os
 from pathlib import Path
 
+import cv2
+import numpy as np
 from PIL import Image
 from dotenv import load_dotenv
 from google import genai
@@ -16,16 +18,46 @@ from schemas.schemas import GenerateImageRequest, GenerateImageResponse
 load_dotenv(dotenv_path=Path(__file__).resolve().parent.parent / ".env")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 client = genai.Client(api_key=GEMINI_API_KEY)
+_GENERATED_IMAGE_PATH = Path(__file__).resolve().parent.parent / "GENERATED.png"
+
+
+def _save_debug_image(image: Image.Image, path: Path = _GENERATED_IMAGE_PATH) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    image.save(path, format="PNG")
+
+
+def _looks_like_tracing_sketch(image: Image.Image) -> bool:
+    rgb_pixels = np.asarray(image.convert("RGB"), dtype=np.uint8)
+    bgr_pixels = cv2.cvtColor(rgb_pixels, cv2.COLOR_RGB2BGR)
+    gray = cv2.cvtColor(bgr_pixels, cv2.COLOR_BGR2GRAY)
+    hsv = cv2.cvtColor(bgr_pixels, cv2.COLOR_BGR2HSV)
+
+    white_ratio = float(np.count_nonzero(gray >= 240) / gray.size)
+    dark_ratio = float(np.count_nonzero(gray <= 80) / gray.size)
+    saturation_mean = float(hsv[:, :, 1].mean())
+
+    return white_ratio >= 0.45 and dark_ratio <= 0.35 and saturation_mean <= 45.0
 
 
 async def ingest_reference_image(request: IngestReferenceImageRequest) -> Image.Image:
     """
-    Passes the reference image through Gemini to produce a simple dotted-line sketch.
-    Returns the generated sketch as a PIL Image.
+    Normalizes the uploaded image into a clean tracing sketch for stroke extraction.
+    If the input is already sketch-like, Gemini is skipped.
     """
     image_bytes = base64.b64decode(extract_base64_data(request.reference_image_base64))
-    input_image = Image.open(io.BytesIO(image_bytes))
-    prompt = "use this picture, convert it into dotted strokes for beginners, each new stroke is a different color. Do NOT add any numbers"
+    input_image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+
+    if _looks_like_tracing_sketch(input_image):
+        _save_debug_image(input_image)
+        return input_image
+
+    prompt = (
+        "Convert this image into a very simple beginner tracing sketch. "
+        "Use clean, solid, continuous black outlines on a plain white background. "
+        "Keep only the main silhouette and a few defining shapes. "
+        "No fills, no shading, no gradients, no dots, no hatching, no texture, no background, no numbers, and no text. "
+        "Make the result easy to break into 15 to 30 traceable strokes."
+    )
 
     response = await client.aio.models.generate_content(
         model="gemini-3.1-flash-image-preview",
@@ -38,14 +70,7 @@ async def ingest_reference_image(request: IngestReferenceImageRequest) -> Image.
         ),
     )
 
-    # TODO, for now save the image as GENERATED.png
-    with open("GENERATED.png", "wb") as f:
-        for part in response.candidates[0].content.parts:
-            if getattr(part, "inline_data", None):
-                f.write(part.inline_data.data)
-
     parts = []
-    output_images: list[str] = []
 
     # Preferred response shape from Gemini docs.
     for part in getattr(response, "parts", []) or []:
@@ -59,7 +84,8 @@ async def ingest_reference_image(request: IngestReferenceImageRequest) -> Image.
     if not parts:
         raise ValueError("Gemini did not return an image for the reference sketch.")
 
-    sketch_img = Image.open(io.BytesIO(parts[0].inline_data.data))
+    sketch_img = Image.open(io.BytesIO(parts[0].inline_data.data)).convert("RGB")
+    _save_debug_image(sketch_img)
     return sketch_img
 
 
@@ -150,7 +176,7 @@ async def generate_image(request: GenerateImageRequest) -> GenerateImageResponse
             image_data_url = f"data:{mime_type};base64,{image_b64}"
 
     return GenerateImageResponse(
-        reference_url=image_data_url,
+        generated_image_url=image_data_url,
         message=text_message,
     )
 

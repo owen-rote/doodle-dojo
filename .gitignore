@@ -1,6 +1,8 @@
 # Our stuff
 
 layer_*.*
+backend/generated_strokes/
+backend/generated_strokes_notebook/
 
 .venv/
 .env

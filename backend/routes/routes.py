@@ -24,18 +24,18 @@ async def upload_reference_image(body: IngestReferenceImageRequest) -> IngestRef
     """Endpoint to receive reference image uploads from React frontend.
 
     Pipeline:
-    1. Gemini converts the photo into a simple dotted-line sketch.
-    2. The sketch is split into per-color layers (black on transparent).
-    3. Layers are stored in memory and returned to the caller.
+    1. Gemini normalizes the upload into a clean tracing sketch when needed.
+    2. The sketch is converted into ordered guide strokes using the stroke-extraction pipeline.
+    3. Each stroke guide is saved as a transparent PNG and stored in memory for retrieval.
     """
     global _stroke_images_memory
     _stroke_images_memory.clear()
     sketch_img = await gemini_service.ingest_reference_image(body)
-    _stroke_images_memory = image_processing_service.split_sketch_by_color(sketch_img)
+    stroke_result = image_processing_service.extract_stroke_guides(sketch_img)
+    _stroke_images_memory = stroke_result.stroke_images
     return IngestReferenceImageResponse(
-        #strokes=_stroke_images_memory,
         count=len(_stroke_images_memory),
-        message="Success",
+        message=f"Saved {len(_stroke_images_memory)} stroke PNGs.",
     )
 
 
