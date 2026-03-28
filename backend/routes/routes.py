@@ -6,6 +6,7 @@ from schemas.schemas import SendChatRequest, SendChatResponse
 from schemas.schemas import GenerateSongRequest, GenerateSongResponse
 from schemas.schemas import GenerateImageRequest, GenerateImageResponse
 import services.gemini_service as gemini_service
+import services.image_processing_service as image_processing_service
 
 # In memory storage for strokes
 _stroke_images_memory: list[str] = []
@@ -18,12 +19,23 @@ async def index():
     return {"message": "Hello, world!"}
 
 
-@router.post("/upload_reference_image")
-async def upload_reference_image(body: IngestReferenceImageRequest):
-    """Endpoint to receive reference image uploads from React frontend."""
+@router.post("/upload_reference_image", response_model=IngestReferenceImageResponse)
+async def upload_reference_image(body: IngestReferenceImageRequest) -> IngestReferenceImageResponse:
+    """Endpoint to receive reference image uploads from React frontend.
+
+    Pipeline:
+    1. Gemini converts the photo into a simple dotted-line sketch.
+    2. The sketch is split into per-color layers (black on transparent).
+    3. Layers are stored in memory and returned to the caller.
+    """
     global _stroke_images_memory
-    _stroke_images_memory = await gemini_service.ingest_reference_image(body)
-    return IngestReferenceImageResponse(count=len(_stroke_images_memory), message="Success")
+    sketch_img = await gemini_service.ingest_reference_image(body)
+    _stroke_images_memory = image_processing_service.split_sketch_by_color(sketch_img)
+    return IngestReferenceImageResponse(
+        strokes=_stroke_images_memory,
+        count=len(_stroke_images_memory),
+        message="Success",
+    )
 
 
 @router.post(

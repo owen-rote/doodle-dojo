@@ -18,14 +18,20 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 client = genai.Client(api_key=GEMINI_API_KEY)
 
 
-async def ingest_reference_image(request: IngestReferenceImageRequest) -> list[str]:
+async def ingest_reference_image(request: IngestReferenceImageRequest) -> Image.Image:
     """
-    Takes reference image
-    returns list of stroke variation images (as base64 data URLs).
+    Passes the reference image through Gemini to produce a simple dotted-line sketch.
+    Returns the generated sketch as a PIL Image.
     """
     image_bytes = base64.b64decode(extract_base64_data(request.reference_image_base64))
     input_image = Image.open(io.BytesIO(image_bytes))
-    prompt = "Generate simple stroke or line variation suggestions from this reference image."
+    prompt = (
+        "Generate Image. Make this picture into an ultra simple black on white dotted line sketch "
+        "super not detailed for a beginner to easily copy. Only keep the most essential lines and "
+        "shapes that capture the essence of the image. Remove all shading, textures, and fine details. "
+        "The result should be a very basic dotted line drawing that conveys the main forms and "
+        "composition of the original image without any complexity."
+    )
 
     response = await client.aio.models.generate_content(
         model="gemini-3.1-flash-image-preview",
@@ -39,26 +45,29 @@ async def ingest_reference_image(request: IngestReferenceImageRequest) -> list[s
         ),
     )
 
+    #TODO, for now save the image as GENERATED.png
+    with open("GENERATED.png", "wb") as f:
+        for part in response.candidates[0].content.parts:
+            if getattr(part, "inline_data", None):
+                f.write(part.inline_data.data)
+
+    parts = []
     output_images: list[str] = []
 
     # Preferred response shape from Gemini docs.
     for part in getattr(response, "parts", []) or []:
         if getattr(part, "inline_data", None):
-            image_b64 = base64.b64encode(part.inline_data.data).decode("utf-8")
-            mime_type = part.inline_data.mime_type or "image/png"
-            data_url = f"data:{mime_type};base64,{image_b64}"
-            output_images.append(data_url)
-
-    # Fallback parser for candidate-based response shape.
-    if not output_images and getattr(response, "candidates", None):
+            parts.append(part)
+    if not parts and getattr(response, "candidates", None):
         for part in response.candidates[0].content.parts:
             if getattr(part, "inline_data", None):
-                image_b64 = base64.b64encode(part.inline_data.data).decode("utf-8")
-                mime_type = part.inline_data.mime_type or "image/png"
-                data_url = f"data:{mime_type};base64,{image_b64}"
-                output_images.append(data_url)
+                parts.append(part)
 
-    return output_images
+    if not parts:
+        raise ValueError("Gemini did not return an image for the reference sketch.")
+
+    sketch_img = Image.open(io.BytesIO(parts[0].inline_data.data))
+    return sketch_img
 
 
 async def send_chat(request: SendChatRequest) -> SendChatResponse:

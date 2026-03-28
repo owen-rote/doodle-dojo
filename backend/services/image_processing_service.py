@@ -157,6 +157,7 @@ def split_sketch_by_color(img: Image.Image) -> list[str]:
 
     return data_urls
 
+
 if __name__ == "__main__":
     img = Image.open("services/image.png")
     layers = split_sketch_by_color(img)
