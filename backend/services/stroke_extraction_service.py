@@ -13,10 +13,7 @@ Pipeline:
 """
 
 import base64
-from datetime import datetime
-from pathlib import Path
 from typing import Any
-from uuid import uuid4
 
 import cv2
 import networkx as nx
@@ -31,10 +28,6 @@ DARK_THRESH    = 60    # color-mode HSV-Value cutoff (BINARY_INV)
 MERGE_ENDPOINT_MAX_DIST = 2.5
 MERGE_MIN_ALIGNMENT = 0.35
 MERGE_ROUNDS = 4
-
-DEBUG_OUTPUT_ROOT = (
-    Path(__file__).resolve().parent.parent / "debug" / "stroke_extraction"
-)
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -217,46 +210,6 @@ def _merge_touching_strokes(
     return merged_strokes
 
 
-def _make_debug_output_dir() -> Path:
-    run_id = datetime.now().strftime("%Y%m%d-%H%M%S") + f"-{uuid4().hex[:8]}"
-    output_dir = DEBUG_OUTPUT_ROOT / run_id
-    output_dir.mkdir(parents=True, exist_ok=True)
-    return output_dir
-
-
-def _save_debug_image(path: Path, image: np.ndarray) -> None:
-    if not cv2.imwrite(str(path), image):
-        raise RuntimeError(f"Failed to write debug image: {path}")
-
-
-def _render_stroke_debug_image(
-    image_shape: tuple[int, int],
-    path_pixels: list[tuple[int, int]],
-    dots: list[list[int]],
-) -> tuple[np.ndarray, np.ndarray]:
-    height, width = image_shape
-    stroke_image = np.full((height, width, 3), 255, dtype=np.uint8)
-    overlay_image = np.full((height, width, 3), 255, dtype=np.uint8)
-
-    for x, y in path_pixels:
-        stroke_image[y, x] = (0, 0, 0)
-        overlay_image[y, x] = (0, 0, 0)
-
-    for x, y in dots:
-        cv2.circle(overlay_image, (x, y), 3, (0, 0, 255), thickness=-1)
-
-    points = np.array(path_pixels, dtype=np.int32)
-    min_x = max(int(points[:, 0].min()) - 8, 0)
-    max_x = min(int(points[:, 0].max()) + 9, width)
-    min_y = max(int(points[:, 1].min()) - 8, 0)
-    max_y = min(int(points[:, 1].max()) + 9, height)
-
-    return (
-        stroke_image[min_y:max_y, min_x:max_x],
-        overlay_image[min_y:max_y, min_x:max_x],
-    )
-
-
 # ── Public entry point ────────────────────────────────────────────────────────
 
 def extract_strokes(image_base64: str) -> dict[str, Any]:
@@ -286,18 +239,14 @@ def extract_strokes(image_base64: str) -> dict[str, Any]:
         raise ValueError("Could not decode image from base64 data.")
 
     h, w = bgr.shape[:2]
-    debug_output_dir = _make_debug_output_dir()
-    _save_debug_image(debug_output_dir / "original.png", bgr)
 
     # 2. Mode detection + binarisation
     mode = _auto_detect_mode(bgr)
     binary = _binarize(bgr, mode)
-    _save_debug_image(debug_output_dir / "binary.png", binary)
 
     # 3. Skeletonise
     skel = skeletonize(binary > 0)
     skel_uint8 = (skel * 255).astype(np.uint8)
-    _save_debug_image(debug_output_dir / "skeleton.png", skel_uint8)
 
     # 4. Build pixel graph (8-connectivity)
     ys, xs = np.where(skel_uint8 > 0)
@@ -350,20 +299,12 @@ def extract_strokes(image_base64: str) -> dict[str, Any]:
     # 6. Filter + sample dots
     strokes_out: list[dict[str, Any]] = []
     total_dots = 0
-    strokes_dir = debug_output_dir / "strokes"
-    strokes_dir.mkdir(parents=True, exist_ok=True)
 
     for stroke_id, path in enumerate(raw_strokes):
         arc_len = int(round(_path_arc_length(path)))
         if arc_len < MIN_STROKE_PX:
             continue
         dots = _sample_dots_by_arc_length(path, DOT_SPACING)
-        stroke_image, overlay_image = _render_stroke_debug_image((h, w), path, dots)
-        _save_debug_image(strokes_dir / f"stroke_{stroke_id:03d}.png", stroke_image)
-        _save_debug_image(
-            strokes_dir / f"stroke_{stroke_id:03d}_dots.png",
-            overlay_image,
-        )
         strokes_out.append({
             "stroke_id": stroke_id,
             "point_count": len(dots),
@@ -379,6 +320,5 @@ def extract_strokes(image_base64: str) -> dict[str, Any]:
         "dot_spacing": DOT_SPACING,
         "stroke_count": len(strokes_out),
         "total_dots": total_dots,
-        "debug_output_dir": str(debug_output_dir),
         "strokes": strokes_out,
     }
