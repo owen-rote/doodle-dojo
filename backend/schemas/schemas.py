@@ -4,7 +4,7 @@ from pydantic import BaseModel, model_validator
 # ============== Send Chat ==========================================
 class SendChatRequest(BaseModel):
     drawing_json: dict = dict()
-    drawing_url: str = ""  # URL might be base64? 
+    drawing_url: str = ""  # URL might be base64?
     reference_json: dict = dict()
     reference_url: str = ""
     message: str = ""
@@ -14,19 +14,27 @@ class SendChatResponse(BaseModel):
     message: str
 
 
-# =====================================================================
+# ============== Ingest Reference Image ================================
+class IngestReferenceImage(BaseModel):
+    reference_image_base64: str  # Data URL or base64
 
 
 # ============== Autocomplete Stroke ================================
 class AutocompleteStrokeRequest(BaseModel):
-    drawing_json: dict = dict()
-    drawing_url: str = ""
-    reference_json: dict = dict()
-    reference_url: str = ""
+    """React frontend sends reference image + optional current drawing state"""
+
+    reference_image_base64: str  # Data URL or base64: reference/inspiration image
+    current_drawing_base64: str | None = None  # Optional: current canvas state (PNG/JPEG as base64 data URL)
+
+    @model_validator(mode="after")
+    def check_input(self):
+        if not self.reference_image_base64:
+            raise ValueError("reference_image_base64 is required.")
+        return self
 
 
 class AutocompleteStrokeResponse(BaseModel):
-    completions: list[str] = list()
+    stroke_variations: list[str] = list()  # List of base64 data URLs (PNG/JPEG)
     message: str = ""
 
 
@@ -47,9 +55,11 @@ class GenerateSongResponse(BaseModel):
 
 # =====================================================================
 
+
 # ============== Generate Reference Image ========================================
 class GenerateImageRequest(BaseModel):
     """input can be either text prompt or reference image, or both"""
+
     prompt: str | None = None
     image_base64: str | None = None
 
@@ -61,12 +71,10 @@ class GenerateImageRequest(BaseModel):
 
 
 class GenerateImageResponse(BaseModel):
-    generated_image_url: str = "" # # generated images are better returned as links 
-    message: str = ""  
+    generated_image_url: str = ""  # # generated images are better returned as links
+    message: str = ""
 
 
 # =====================================================================
 
 # ============== Generate Video ========================================
-
-

@@ -21,6 +21,61 @@ async def autocomplete_stroke(request: AutocompleteStrokeRequest) -> Autocomplet
     pass
 
 
+async def get_strokes_from_reference(request: AutocompleteStrokeRequest) -> list[str]:
+    """
+    Takes reference image + optional current drawing from React frontend,
+    returns list of stroke variation images (as data URLs).
+    """
+    contents = []
+
+    # Add reference image (required)
+    image_bytes = base64.b64decode(extract_base64_data(request.reference_image_base64))
+    mime_type = detect_image_mime_type(image_bytes)
+
+    contents.append(types.Part.from_bytes(data=image_bytes, mime_type=mime_type))
+
+    # Add current drawing context if provided
+    if request.current_drawing_base64:
+        drawing_bytes = base64.b64decode(extract_base64_data(request.current_drawing_base64))
+        drawing_mime = detect_image_mime_type(drawing_bytes)
+
+        contents.append(types.Part.from_bytes(data=drawing_bytes, mime_type=drawing_mime))
+        prompt = "Generate stroke variation suggestions based on the reference and current drawing. Keep style consistent."
+    else:
+        prompt = "Generate stroke/line variation suggestions from this reference image."
+
+    contents.insert(0, prompt)
+
+    # Call Gemini to generate variations
+    response = await client.aio.models.generate_content(
+        model="gemini-2.0-flash",
+        contents=contents,
+        config=types.GenerateContentConfig(
+            response_modalities=["IMAGE"],
+        ),
+    )
+
+    # Extract & encode output images as base64 data URLs
+    output_images: list[str] = []
+    for part in response.candidates[0].content.parts:
+        if hasattr(part, "inline_data") and part.inline_data:
+            image_b64 = base64.b64encode(part.inline_data.data).decode("utf-8")
+            mime_type = part.inline_data.mime_type or "image/png"
+            data_url = f"data:{mime_type};base64,{image_b64}"
+            output_images.append(data_url)
+
+    return output_images
+
+
+def detect_image_mime_type(image_bytes: bytes) -> str:
+    """Detect MIME type from image magic bytes."""
+    if image_bytes.startswith(b"\x89PNG"):
+        return "image/png"
+    elif image_bytes.startswith(b"\xff\xd8\xff"):
+        return "image/jpeg"
+    return "image/png"  # Default fallback
+
+
 async def send_chat(request: SendChatRequest) -> SendChatResponse:
     response = await client.aio.models.generate_content(model="gemini-2.0-flash", contents=[request.data, request.message])
     return SendChatResponse(message=response.text)

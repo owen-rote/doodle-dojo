@@ -1,10 +1,11 @@
 from fastapi import APIRouter
 
-from backend.schemas.schemas import AutocompleteStrokeRequest, AutocompleteStrokeResponse
-from backend.schemas.schemas import SendChatRequest, SendChatResponse
-from backend.schemas.schemas import GenerateSongRequest, GenerateSongResponse
-from backend.schemas.schemas import GenerateImageRequest, GenerateImageResponse
-import backend.services.gemini_service as gemini_service
+from schemas.schemas import IngestReferenceImage
+from schemas.schemas import AutocompleteStrokeRequest, AutocompleteStrokeResponse
+from schemas.schemas import SendChatRequest, SendChatResponse
+from schemas.schemas import GenerateSongRequest, GenerateSongResponse
+from schemas.schemas import GenerateImageRequest, GenerateImageResponse
+import services.gemini_service as gemini_service
 
 router = APIRouter(prefix="/api")
 
@@ -15,6 +16,12 @@ router = APIRouter(prefix="/api")
 )
 async def index():
     return {"message": "Hello, world!"}
+
+@router.post("/upload_reference_image")
+async def upload_reference_image(body: IngestReferenceImage):
+    """Endpoint to receive reference image uploads from React frontend."""
+    gemini_service.ingest_reference_image(body)
+    return {"message": "Success"}
 
 
 @router.post(
@@ -51,7 +58,7 @@ async def generate_song(body: GenerateSongRequest) -> GenerateSongResponse:
 
 @router.post(
     "/generate_image",
-    response_model=GenerateImageResponse, 
+    response_model=GenerateImageResponse,
     summary="Generate reference image for drawing prompt",
 )
 async def generate_image(body: GenerateImageRequest) -> GenerateImageResponse:
