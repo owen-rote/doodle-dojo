@@ -10,8 +10,6 @@ from google.genai import types
 
 from schemas.schemas import IngestReferenceImageRequest, IngestReferenceImageResponse
 from schemas.schemas import SendChatRequest, SendChatResponse
-from schemas.schemas import GenerateSongRequest, GenerateSongResponse
-from schemas.schemas import GenerateImageRequest, GenerateImageResponse
 
 load_dotenv(dotenv_path=Path(__file__).resolve().parent.parent / ".env")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
