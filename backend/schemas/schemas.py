@@ -15,29 +15,25 @@ class SendChatResponse(BaseModel):
 
 
 # ============== Ingest Reference Image ================================
-class IngestReferenceImage(BaseModel):
+class IngestReferenceImageRequest(BaseModel):
     reference_image_base64: str  # Data URL or base64
+
 
 class IngestReferenceImageResponse(BaseModel):
     strokes: list[str] = list()  # List of base64 data URLs (PNG/JPEG)
+    count: int = 0
     message: str = ""
 
 
-# ============== Autocomplete Stroke ================================
-class AutocompleteStrokeRequest(BaseModel):
+# ============== Get Strokes ================================
+class GetStrokeRequest(BaseModel):
     """React frontend sends reference image + optional current drawing state"""
 
-    reference_image_base64: str  # Data URL or base64: reference/inspiration image
-
-    @model_validator(mode="after")
-    def check_input(self):
-        if not self.reference_image_base64:
-            raise ValueError("reference_image_base64 is required.")
-        return self
+    indexes: list[int] = []  # List of stroke indexes to fetch (e.g. [0] for next stroke, [0,1] for next 2 strokes, etc.)
 
 
-class AutocompleteStrokeResponse(BaseModel):
-    stroke_variations: list[str] = list()  # List of base64 data URLs (PNG/JPEG)
+class GetStrokeResponse(BaseModel):
+    stroke_variations: dict[int, str] = dict()  # Dictionary mapping stroke indexes to base64 data URLs (PNG/JPEG)
     message: str = ""
 
 
@@ -80,21 +76,25 @@ class GenerateImageResponse(BaseModel):
 
 # =====================================================================
 
+
 # ============== Guided Drawing - Stroke Session =======================
 class StrokeMetadata(BaseModel):
     """Optional metadata about a stroke"""
+
     bbox: dict | None = None  # {"x": 0, "y": 0, "width": 100, "height": 100}
     vector_path: str | None = None  # SVG path data if vectorized
 
 
 class StartSessionRequest(BaseModel):
     """Begin a guided drawing session with a reference image"""
+
     user_id: str
     reference_image_base64: str  # Reference image as data URL or base64
 
 
 class StartSessionResponse(BaseModel):
     """Initial session data with first stroke overlay"""
+
     session_id: str
     first_stroke_overlay: str  # Base64 data URL of first stroke (transparent PNG)
     total_strokes: int  # How many strokes user will draw
@@ -103,12 +103,14 @@ class StartSessionResponse(BaseModel):
 
 class NextStrokeRequest(BaseModel):
     """Fetch next stroke overlay"""
+
     session_id: str
     user_id: str
 
 
 class NextStrokeResponse(BaseModel):
     """Next stroke overlay"""
+
     stroke_overlay: str  # Base64 data URL
     current_stroke_index: int
     total_strokes: int

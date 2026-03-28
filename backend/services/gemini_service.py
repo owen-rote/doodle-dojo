@@ -1,4 +1,5 @@
 import base64
+import io
 import os
 from pathlib import Path
 
@@ -7,66 +8,57 @@ from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 
-from schemas.schemas import AutocompleteStrokeRequest, AutocompleteStrokeResponse
+from schemas.schemas import IngestReferenceImageRequest, IngestReferenceImageResponse
 from schemas.schemas import SendChatRequest, SendChatResponse
 from schemas.schemas import GenerateSongRequest, GenerateSongResponse
 from schemas.schemas import GenerateImageRequest, GenerateImageResponse
 
-load_dotenv(dotenv_path=Path(__file__).resolve().parent / ".env")
+load_dotenv(dotenv_path=Path(__file__).resolve().parent.parent / ".env")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 client = genai.Client(api_key=GEMINI_API_KEY)
 
 
-async def autocomplete_stroke(request: AutocompleteStrokeRequest) -> AutocompleteStrokeResponse:
-    pass
-
-
-async def get_strokes_from_reference(request: AutocompleteStrokeRequest) -> list[str]:
+async def ingest_reference_image(request: IngestReferenceImageRequest) -> list[str]:
     """
     Takes reference image
     returns list of stroke variation images (as base64 data URLs).
     """
-    contents = []
-
-    # Add reference image (required)
     image_bytes = base64.b64decode(extract_base64_data(request.reference_image_base64))
-    mime_type = detect_image_mime_type(image_bytes)
+    input_image = Image.open(io.BytesIO(image_bytes))
+    prompt = "Generate simple stroke or line variation suggestions from this reference image."
 
-    contents.append(types.Part.from_bytes(data=image_bytes, mime_type=mime_type))
-
-    # TODO make good
-    prompt = "Generate stroke/line variation suggestions from this reference image."
-
-    contents.insert(0, prompt)
-
-    # Call Gemini to generate variations
     response = await client.aio.models.generate_content(
-        model="gemini-2.0-flash", #TODO nano banana
-        contents=contents,
+        model="gemini-3.1-flash-image-preview",
+        contents=[prompt, input_image],
         config=types.GenerateContentConfig(
-            response_modalities=["IMAGE"],
+            response_modalities=["TEXT", "IMAGE"],
+            thinking_config=types.ThinkingConfig(
+                thinking_level="High",
+                include_thoughts=False,
+            ),
         ),
     )
 
-    # Extract & encode output images as base64 data URLs
     output_images: list[str] = []
-    for part in response.candidates[0].content.parts:
-        if hasattr(part, "inline_data") and part.inline_data:
+
+    # Preferred response shape from Gemini docs.
+    for part in getattr(response, "parts", []) or []:
+        if getattr(part, "inline_data", None):
             image_b64 = base64.b64encode(part.inline_data.data).decode("utf-8")
             mime_type = part.inline_data.mime_type or "image/png"
             data_url = f"data:{mime_type};base64,{image_b64}"
             output_images.append(data_url)
 
+    # Fallback parser for candidate-based response shape.
+    if not output_images and getattr(response, "candidates", None):
+        for part in response.candidates[0].content.parts:
+            if getattr(part, "inline_data", None):
+                image_b64 = base64.b64encode(part.inline_data.data).decode("utf-8")
+                mime_type = part.inline_data.mime_type or "image/png"
+                data_url = f"data:{mime_type};base64,{image_b64}"
+                output_images.append(data_url)
+
     return output_images
-
-
-def detect_image_mime_type(image_bytes: bytes) -> str:
-    """Detect MIME type from image magic bytes."""
-    if image_bytes.startswith(b"\x89PNG"):
-        return "image/png"
-    elif image_bytes.startswith(b"\xff\xd8\xff"):
-        return "image/jpeg"
-    return "image/png"  # Default fallback
 
 
 async def send_chat(request: SendChatRequest) -> SendChatResponse:
@@ -136,6 +128,10 @@ async def generate_image(request: GenerateImageRequest) -> GenerateImageResponse
         contents=contents,
         config=types.GenerateContentConfig(
             response_modalities=["TEXT", "IMAGE"],
+            thinking_config=types.ThinkingConfig(
+                thinking_level="High",
+                include_thoughts=False,
+            ),
         ),
     )
 
@@ -155,3 +151,12 @@ async def generate_image(request: GenerateImageRequest) -> GenerateImageResponse
         reference_url=image_data_url,
         message=text_message,
     )
+
+
+def detect_image_mime_type(image_bytes: bytes) -> str:
+    """Detect MIME type from image magic bytes."""
+    if image_bytes.startswith(b"\x89PNG"):
+        return "image/png"
+    elif image_bytes.startswith(b"\xff\xd8\xff"):
+        return "image/jpeg"
+    return "image/png"  # Default fallback

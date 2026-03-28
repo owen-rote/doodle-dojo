@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from pathlib import Path
 
-from backend.routes.routes import router
+from routes.routes import router
 
 
 load_dotenv(dotenv_path=Path(__file__).resolve().parent / ".env")
