@@ -13,7 +13,10 @@ Pipeline:
 """
 
 import base64
+from datetime import datetime
+from pathlib import Path
 from typing import Any
+from uuid import uuid4
 
 import cv2
 import networkx as nx
@@ -25,6 +28,13 @@ DOT_SPACING    = 15    # pixels between consecutive guide dots
 MIN_STROKE_PX  = 10    # discard strokes shorter than this (in pixels)
 THRESH_VALUE   = 200   # lineart-mode brightness cutoff (BINARY_INV)
 DARK_THRESH    = 60    # color-mode HSV-Value cutoff (BINARY_INV)
+MERGE_ENDPOINT_MAX_DIST = 2.5
+MERGE_MIN_ALIGNMENT = 0.35
+MERGE_ROUNDS = 4
+
+DEBUG_OUTPUT_ROOT = (
+    Path(__file__).resolve().parent.parent / "debug" / "stroke_extraction"
+)
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -87,6 +97,166 @@ def _sample_dots_by_arc_length(
     return dots
 
 
+def _path_arc_length(path: list[tuple[int, int]]) -> float:
+    if len(path) < 2:
+        return 0.0
+    return float(sum(
+        np.hypot(path[i + 1][0] - path[i][0], path[i + 1][1] - path[i][1])
+        for i in range(len(path) - 1)
+    ))
+
+
+def _endpoint_tangent(path: list[tuple[int, int]], at_start: bool) -> np.ndarray | None:
+    if len(path) < 2:
+        return None
+    if at_start:
+        start = np.array(path[0], dtype=float)
+        next_point = np.array(path[1], dtype=float)
+        tangent = next_point - start
+    else:
+        prev_point = np.array(path[-2], dtype=float)
+        end = np.array(path[-1], dtype=float)
+        tangent = end - prev_point
+
+    norm = np.linalg.norm(tangent)
+    if norm == 0:
+        return None
+    return tangent / norm
+
+
+def _best_merge_candidate(
+    path_a: list[tuple[int, int]],
+    path_b: list[tuple[int, int]],
+) -> tuple[float, list[tuple[int, int]]] | None:
+    orientation_pairs = [
+        (path_a, path_b),
+        (list(reversed(path_a)), path_b),
+        (path_a, list(reversed(path_b))),
+        (list(reversed(path_a)), list(reversed(path_b))),
+    ]
+
+    best_score: float | None = None
+    best_path: list[tuple[int, int]] | None = None
+
+    for oriented_a, oriented_b in orientation_pairs:
+        join_a = np.array(oriented_a[-1], dtype=float)
+        join_b = np.array(oriented_b[0], dtype=float)
+        distance = float(np.linalg.norm(join_b - join_a))
+        if distance > MERGE_ENDPOINT_MAX_DIST:
+            continue
+
+        tangent_a = _endpoint_tangent(oriented_a, at_start=False)
+        tangent_b = _endpoint_tangent(oriented_b, at_start=True)
+        if tangent_a is None or tangent_b is None:
+            continue
+
+        alignment = float(np.dot(tangent_a, tangent_b))
+        if alignment < MERGE_MIN_ALIGNMENT:
+            continue
+
+        merged_path = oriented_a + oriented_b[1:]
+        score = alignment - (distance / MERGE_ENDPOINT_MAX_DIST) * 0.25
+        if best_score is None or score > best_score:
+            best_score = score
+            best_path = merged_path
+
+    if best_score is None or best_path is None:
+        return None
+
+    return best_score, best_path
+
+
+def _merge_touching_strokes_once(
+    raw_strokes: list[list[tuple[int, int]]],
+) -> list[list[tuple[int, int]]]:
+    candidates: list[tuple[float, int, int, list[tuple[int, int]]]] = []
+
+    for left_index in range(len(raw_strokes)):
+        for right_index in range(left_index + 1, len(raw_strokes)):
+            candidate = _best_merge_candidate(
+                raw_strokes[left_index],
+                raw_strokes[right_index],
+            )
+            if candidate is None:
+                continue
+            score, merged_path = candidate
+            candidates.append((score, left_index, right_index, merged_path))
+
+    candidates.sort(reverse=True, key=lambda item: item[0])
+
+    used_indices: set[int] = set()
+    merged_indices: set[int] = set()
+    merged_paths: list[list[tuple[int, int]]] = []
+
+    for _, left_index, right_index, merged_path in candidates:
+        if left_index in used_indices or right_index in used_indices:
+            continue
+        used_indices.add(left_index)
+        used_indices.add(right_index)
+        merged_indices.add(left_index)
+        merged_indices.add(right_index)
+        merged_paths.append(merged_path)
+
+    for index, raw_stroke in enumerate(raw_strokes):
+        if index not in merged_indices:
+            merged_paths.append(raw_stroke)
+
+    return merged_paths
+
+
+def _merge_touching_strokes(
+    raw_strokes: list[list[tuple[int, int]]],
+    rounds: int = MERGE_ROUNDS,
+) -> list[list[tuple[int, int]]]:
+    merged_strokes = raw_strokes
+    for _ in range(rounds):
+        next_strokes = _merge_touching_strokes_once(merged_strokes)
+        if len(next_strokes) == len(merged_strokes):
+            break
+        merged_strokes = next_strokes
+    return merged_strokes
+
+
+def _make_debug_output_dir() -> Path:
+    run_id = datetime.now().strftime("%Y%m%d-%H%M%S") + f"-{uuid4().hex[:8]}"
+    output_dir = DEBUG_OUTPUT_ROOT / run_id
+    output_dir.mkdir(parents=True, exist_ok=True)
+    return output_dir
+
+
+def _save_debug_image(path: Path, image: np.ndarray) -> None:
+    if not cv2.imwrite(str(path), image):
+        raise RuntimeError(f"Failed to write debug image: {path}")
+
+
+def _render_stroke_debug_image(
+    image_shape: tuple[int, int],
+    path_pixels: list[tuple[int, int]],
+    dots: list[list[int]],
+) -> tuple[np.ndarray, np.ndarray]:
+    height, width = image_shape
+    stroke_image = np.full((height, width, 3), 255, dtype=np.uint8)
+    overlay_image = np.full((height, width, 3), 255, dtype=np.uint8)
+
+    for x, y in path_pixels:
+        stroke_image[y, x] = (0, 0, 0)
+        overlay_image[y, x] = (0, 0, 0)
+
+    for x, y in dots:
+        cv2.circle(overlay_image, (x, y), 3, (0, 0, 255), thickness=-1)
+
+    points = np.array(path_pixels, dtype=np.int32)
+    min_x = max(int(points[:, 0].min()) - 8, 0)
+    max_x = min(int(points[:, 0].max()) + 9, width)
+    min_y = max(int(points[:, 1].min()) - 8, 0)
+    max_y = min(int(points[:, 1].max()) + 9, height)
+
+    return (
+        stroke_image[min_y:max_y, min_x:max_x],
+        overlay_image[min_y:max_y, min_x:max_x],
+    )
+
+
 # ── Public entry point ────────────────────────────────────────────────────────
 
 def extract_strokes(image_base64: str) -> dict[str, Any]:
@@ -116,14 +286,18 @@ def extract_strokes(image_base64: str) -> dict[str, Any]:
         raise ValueError("Could not decode image from base64 data.")
 
     h, w = bgr.shape[:2]
+    debug_output_dir = _make_debug_output_dir()
+    _save_debug_image(debug_output_dir / "original.png", bgr)
 
     # 2. Mode detection + binarisation
     mode = _auto_detect_mode(bgr)
     binary = _binarize(bgr, mode)
+    _save_debug_image(debug_output_dir / "binary.png", binary)
 
     # 3. Skeletonise
     skel = skeletonize(binary > 0)
     skel_uint8 = (skel * 255).astype(np.uint8)
+    _save_debug_image(debug_output_dir / "skeleton.png", skel_uint8)
 
     # 4. Build pixel graph (8-connectivity)
     ys, xs = np.where(skel_uint8 > 0)
@@ -171,18 +345,25 @@ def extract_strokes(image_base64: str) -> dict[str, Any]:
             if frozenset([start, nxt]) not in visited_edges:
                 raw_strokes.append(walk_stroke(start, nxt))
 
+    raw_strokes = _merge_touching_strokes(raw_strokes)
+
     # 6. Filter + sample dots
     strokes_out: list[dict[str, Any]] = []
     total_dots = 0
+    strokes_dir = debug_output_dir / "strokes"
+    strokes_dir.mkdir(parents=True, exist_ok=True)
 
     for stroke_id, path in enumerate(raw_strokes):
-        if len(path) < MIN_STROKE_PX:
+        arc_len = int(round(_path_arc_length(path)))
+        if arc_len < MIN_STROKE_PX:
             continue
         dots = _sample_dots_by_arc_length(path, DOT_SPACING)
-        arc_len = int(sum(
-            np.hypot(path[i + 1][0] - path[i][0], path[i + 1][1] - path[i][1])
-            for i in range(len(path) - 1)
-        ))
+        stroke_image, overlay_image = _render_stroke_debug_image((h, w), path, dots)
+        _save_debug_image(strokes_dir / f"stroke_{stroke_id:03d}.png", stroke_image)
+        _save_debug_image(
+            strokes_dir / f"stroke_{stroke_id:03d}_dots.png",
+            overlay_image,
+        )
         strokes_out.append({
             "stroke_id": stroke_id,
             "point_count": len(dots),
@@ -198,5 +379,6 @@ def extract_strokes(image_base64: str) -> dict[str, Any]:
         "dot_spacing": DOT_SPACING,
         "stroke_count": len(strokes_out),
         "total_dots": total_dots,
+        "debug_output_dir": str(debug_output_dir),
         "strokes": strokes_out,
     }

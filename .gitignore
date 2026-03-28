@@ -1,11 +1,12 @@
 # Our stuff
 
 layer_*.*
-
 .venv/
 .env
 env/
 notes.txt
+debug/
+
 
 *.pyc
 __pycache__/
