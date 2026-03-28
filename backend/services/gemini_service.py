@@ -25,7 +25,7 @@ async def ingest_reference_image(request: IngestReferenceImageRequest) -> Image.
     """
     image_bytes = base64.b64decode(extract_base64_data(request.reference_image_base64))
     input_image = Image.open(io.BytesIO(image_bytes))
-    prompt = "use this picture, convert it into dotted strokes for beginners, each new stroke is a different color. Do NOT add any numbers"
+    prompt = "use this picture, convert it into dotted strokes for beginners, each new stroke is a different color. Do NOT add any numbers split into red, green, blue, yellow, cyan, magenta. group colors together"
 
     response = await client.aio.models.generate_content(
         model="gemini-3.1-flash-image-preview",
@@ -34,6 +34,9 @@ async def ingest_reference_image(request: IngestReferenceImageRequest) -> Image.
             response_modalities=["IMAGE"],
             thinking_config=types.ThinkingConfig(
                 thinking_level="MINIMAL",
+            ),
+            image_config=types.ImageConfig(
+                image_size="1K",
             ),
         ),
     )
