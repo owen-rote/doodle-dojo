@@ -101,7 +101,7 @@ export default function DrawingSession() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.2, ease: "easeOut" }}
-      className="flex h-screen flex-col bg-[#0a0a0f]"
+      className="flex h-screen flex-col overflow-hidden bg-[#0a0a0f]"
     >
       <SessionHeader
         sessionTitle={sessionTitle || "Untitled Drawing"}

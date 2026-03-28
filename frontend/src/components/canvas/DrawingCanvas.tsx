@@ -176,6 +176,19 @@ export default function DrawingCanvas() {
     return () => observer.disconnect();
   }, []);
 
+  // Prevent touch scrolling on the canvas so iPad draws instead of scrolls
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const prevent = (e: TouchEvent) => e.preventDefault();
+    el.addEventListener("touchstart", prevent, { passive: false });
+    el.addEventListener("touchmove", prevent, { passive: false });
+    return () => {
+      el.removeEventListener("touchstart", prevent);
+      el.removeEventListener("touchmove", prevent);
+    };
+  }, []);
+
   // Register the Konva stage in canvasStore
   useEffect(() => {
     if (stageRef.current) {
@@ -255,7 +268,7 @@ export default function DrawingCanvas() {
       : "default";
 
   return (
-    <div ref={containerRef} className="relative h-full w-full">
+    <div ref={containerRef} className="relative h-full w-full touch-none">
       {!hasContent && guideStrokes.length === 0 && size.width > 0 && (
         <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
           <span className="text-[18px] text-gray-400">Loading guide...</span>

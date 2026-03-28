@@ -182,12 +182,12 @@ export default function SketchAnimator({
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 12, scale: 0.98 }}
               transition={{ duration: 0.2, ease: "easeOut" }}
-              className="relative w-full max-w-5xl overflow-hidden rounded-[28px] border border-white/12 bg-[#0d0d15] shadow-[0_32px_120px_rgba(0,0,0,0.45)]"
+              className="relative max-h-[90vh] w-full max-w-5xl overflow-y-auto rounded-[28px] border border-white/12 bg-[#0d0d15] shadow-[0_32px_120px_rgba(0,0,0,0.45)]"
               onClick={(event) => event.stopPropagation()}
             >
               <div className="absolute inset-x-0 top-0 h-32 bg-[radial-gradient(circle_at_top,_rgba(217,70,239,0.25),_transparent_68%)]" />
 
-              <div className="relative flex min-h-[640px] flex-col items-center justify-center bg-white/[0.03] p-6 md:p-8">
+              <div className="relative flex flex-col items-center justify-center bg-white/[0.03] p-5 md:p-8">
                 <div className="mb-5 flex w-full max-w-4xl items-start justify-between gap-4">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.22em] text-fuchsia-200/80">
@@ -215,13 +215,13 @@ export default function SketchAnimator({
                     Preview
                   </p>
 
-                  <div className="mt-4 flex min-h-[420px] w-full items-center justify-center overflow-hidden rounded-[24px] border border-white/10 bg-[#08080d]">
+                  <div className="mt-4 flex aspect-video w-full items-center justify-center overflow-hidden rounded-[24px] border border-white/10 bg-[#08080d]">
                     {videoUrl ? (
                       <video
                         key={videoUrl}
                         src={videoUrl}
                         controls
-                        className="h-full min-h-[420px] w-full rounded-[24px] object-contain"
+                        className="h-full w-full rounded-[24px] object-contain"
                       />
                     ) : (
                       <div className="flex max-w-xs flex-col items-center justify-center px-6 text-center">
