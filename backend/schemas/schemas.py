@@ -20,7 +20,7 @@ class IngestReferenceImageRequest(BaseModel):
 
 
 class IngestReferenceImageResponse(BaseModel):
-    strokes: list[str] = list()  # List of base64 data URLs (PNG/JPEG)
+    #strokes: list[str] = list()  # List of base64 data URLs (PNG/JPEG)
     count: int = 0
     message: str = ""
 

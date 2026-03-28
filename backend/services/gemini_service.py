@@ -25,27 +25,20 @@ async def ingest_reference_image(request: IngestReferenceImageRequest) -> Image.
     """
     image_bytes = base64.b64decode(extract_base64_data(request.reference_image_base64))
     input_image = Image.open(io.BytesIO(image_bytes))
-    prompt = (
-        "Generate Image. Make this picture into an ultra simple black on white dotted line sketch "
-        "super not detailed for a beginner to easily copy. Only keep the most essential lines and "
-        "shapes that capture the essence of the image. Remove all shading, textures, and fine details. "
-        "The result should be a very basic dotted line drawing that conveys the main forms and "
-        "composition of the original image without any complexity."
-    )
+    prompt = "use this picture, convert it into dotted strokes for beginners, each new stroke is a different color. Do NOT add any numbers"
 
     response = await client.aio.models.generate_content(
         model="gemini-3.1-flash-image-preview",
         contents=[prompt, input_image],
         config=types.GenerateContentConfig(
-            response_modalities=["TEXT", "IMAGE"],
+            response_modalities=["IMAGE"],
             thinking_config=types.ThinkingConfig(
-                thinking_level="High",
-                include_thoughts=False,
+                thinking_level="MINIMAL",
             ),
         ),
     )
 
-    #TODO, for now save the image as GENERATED.png
+    # TODO, for now save the image as GENERATED.png
     with open("GENERATED.png", "wb") as f:
         for part in response.candidates[0].content.parts:
             if getattr(part, "inline_data", None):

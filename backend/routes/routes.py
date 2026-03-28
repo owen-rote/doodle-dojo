@@ -29,10 +29,11 @@ async def upload_reference_image(body: IngestReferenceImageRequest) -> IngestRef
     3. Layers are stored in memory and returned to the caller.
     """
     global _stroke_images_memory
+    _stroke_images_memory.clear()
     sketch_img = await gemini_service.ingest_reference_image(body)
     _stroke_images_memory = image_processing_service.split_sketch_by_color(sketch_img)
     return IngestReferenceImageResponse(
-        strokes=_stroke_images_memory,
+        #strokes=_stroke_images_memory,
         count=len(_stroke_images_memory),
         message="Success",
     )
