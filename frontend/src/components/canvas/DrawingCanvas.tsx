@@ -1,10 +1,10 @@
 "use client";
 
 import { useRef, useEffect, useState, useCallback } from "react";
-import { Stage, Layer, Line, Circle } from "react-konva";
+import { Stage, Layer, Line } from "react-konva";
 import type Konva from "konva";
 import { useCanvasStore } from "@/stores/canvasStore";
-import { GUIDE_POINTS, GUIDE_POINT_RADIUS } from "@/lib/random_points";
+import { useSessionStore } from "@/stores/sessionStore";
 
 function effectiveWidth(tool: string, base: number): number {
   if (tool === "brush") return base * 2.5;
@@ -28,6 +28,8 @@ export default function DrawingCanvas() {
     finishStroke,
     setStage,
   } = useCanvasStore();
+
+  const guideImageUrl = useSessionStore((s) => s.guideImageUrl);
 
   // Track canvas container size
   useEffect(() => {
@@ -77,9 +79,19 @@ export default function DrawingCanvas() {
 
   return (
     <div ref={containerRef} className="relative h-full w-full">
-      {!hasContent && size.width > 0 && (
+      {/* Stroke guide overlay — transparent PNG from backend */}
+      {guideImageUrl && (
+        <img
+          src={guideImageUrl}
+          alt=""
+          className="pointer-events-none absolute inset-0 z-10 h-full w-full object-contain"
+          draggable={false}
+        />
+      )}
+
+      {!hasContent && !guideImageUrl && size.width > 0 && (
         <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
-          <span className="text-[18px] text-gray-400">Connect the dots...</span>
+          <span className="text-[18px] text-gray-400">Loading guide...</span>
         </div>
       )}
 
@@ -96,20 +108,6 @@ export default function DrawingCanvas() {
           onTouchEnd={handleMouseUp}
           style={{ cursor: activeTool === "eraser" ? "crosshair" : "default" }}
         >
-          {/* Guide dots — rendered first so strokes appear on top */}
-          <Layer listening={false}>
-            {GUIDE_POINTS.map((pt, i) => (
-              <Circle
-                key={i}
-                x={pt.xRatio * size.width}
-                y={pt.yRatio * size.height}
-                radius={GUIDE_POINT_RADIUS}
-                fill="#a855f7"
-                opacity={0.75}
-              />
-            ))}
-          </Layer>
-
           {/* Completed strokes */}
           <Layer>
             {userStrokes.map((stroke) => (

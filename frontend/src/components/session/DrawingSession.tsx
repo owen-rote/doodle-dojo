@@ -7,6 +7,7 @@ import { useCanvasStore } from "@/stores/canvasStore";
 import { useSessionStore } from "@/stores/sessionStore";
 import { mockStrokePlan } from "@/lib/mockStrokePlan";
 import { useGeminiLiveSession } from "@/hooks/useGeminiLiveSession";
+import { useStrokeGuide } from "@/hooks/useStrokeGuide";
 import SessionHeader from "./SessionHeader";
 import ReferencePanel from "./ReferencePanel";
 import ToolBar from "./ToolBar";
@@ -24,6 +25,7 @@ export default function DrawingSession() {
 
   const referenceImageUrl = useSessionStore((s) => s.referenceImageUrl);
   const { prepareVoicePlayback } = useGeminiLiveSession();
+  useStrokeGuide();
 
   // Load mock data only if no reference image was set from the home page
   useEffect(() => {
