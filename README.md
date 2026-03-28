@@ -97,6 +97,7 @@ cd frontend
 npm install
 npm run dev
 ```
+<<<<<<< HEAD
 
 Frontend will be available at:
 
