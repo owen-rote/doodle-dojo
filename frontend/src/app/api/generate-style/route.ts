@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { GoogleGenAI } from "@google/genai";
 
 // ─── Prompt templates ───
 const PROMPTS = {
@@ -220,60 +221,39 @@ export async function POST(request: NextRequest) {
   const promptKey = `${style}_${inputType}` as keyof typeof PROMPTS;
   const prompt = PROMPTS[promptKey];
 
-  // Build request parts — for image input, send image first, then the prompt
-  const parts: Record<string, unknown>[] = [];
+  // Build contents for the SDK
+  // For image input: [image, text prompt]
+  // For text input: [combined prompt + user description]
+  const contents: Array<string | { inlineData: { mimeType: string; data: string } }> = [];
 
   if (inputType === "image" && imageBase64) {
-    parts.push({
-      inline_data: {
-        mime_type: imageMimeType || "image/png",
+    contents.push({
+      inlineData: {
+        mimeType: imageMimeType || "image/png",
         data: imageBase64,
       },
     });
+    contents.push(prompt || "");
   }
 
   if (inputType === "text" && textPrompt) {
-    // For text input, combine prompt + user description
     const fullText = prompt
       ? `${prompt}\n\nSubject to draw: ${textPrompt}`
       : textPrompt;
-    parts.push({ text: fullText });
-  } else if (prompt) {
-    // For image input, add the prompt after the image
-    parts.push({ text: prompt });
+    contents.push(fullText);
   }
 
-  const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
-
   try {
-    const response = await fetch(geminiUrl, {
-      method: "POST",
-      headers: {
-        "x-goog-api-key": apiKey,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        contents: [{ parts }],
-        generationConfig: {
-          responseModalities: ["TEXT", "IMAGE"],
-        },
-      }),
+    const ai = new GoogleGenAI({ apiKey });
+
+    const response = await ai.models.generateContent({
+      model: GEMINI_MODEL,
+      contents,
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Gemini API error:", errorText);
-      return NextResponse.json(
-        { error: "Gemini API request failed", details: errorText },
-        { status: response.status }
-      );
-    }
-
-    const data = await response.json();
-
     // Extract the generated image from the response
-    const candidate = data.candidates?.[0];
-    if (!candidate?.content?.parts) {
+    const parts = response.candidates?.[0]?.content?.parts;
+    if (!parts) {
       return NextResponse.json(
         { error: "No content in Gemini response" },
         { status: 502 }
@@ -284,10 +264,10 @@ export async function POST(request: NextRequest) {
     let generatedMimeType: string | null = null;
     let responseText: string | null = null;
 
-    for (const part of candidate.content.parts) {
-      if (part.inline_data) {
-        generatedImageBase64 = part.inline_data.data;
-        generatedMimeType = part.inline_data.mime_type;
+    for (const part of parts) {
+      if (part.inlineData) {
+        generatedImageBase64 = part.inlineData.data ?? null;
+        generatedMimeType = part.inlineData.mimeType ?? null;
       }
       if (part.text) {
         responseText = part.text;
@@ -308,8 +288,9 @@ export async function POST(request: NextRequest) {
     });
   } catch (err) {
     console.error("Generate style error:", err);
+    const message = err instanceof Error ? err.message : "Internal server error";
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: message },
       { status: 500 }
     );
   }

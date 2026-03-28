@@ -21,14 +21,23 @@ export default function DrawingSession() {
     useCanvasStore();
   const { progress, sessionTitle, resetSession, setSession } = useSessionStore();
 
-  // Load mock data on mount
+  const referenceImageUrl = useSessionStore((s) => s.referenceImageUrl);
+
+  // Load mock data only if no reference image was set from the home page
   useEffect(() => {
-    setSession({
-      sessionTitle: "Pikachu Sketch",
-      referenceImageUrl: "/mock/pikachu.png",
-      strokePlan: mockStrokePlan,
-    });
-  }, [setSession]);
+    if (!referenceImageUrl) {
+      setSession({
+        sessionTitle: "Pikachu Sketch",
+        referenceImageUrl: "/mock/pikachu.png",
+        strokePlan: mockStrokePlan,
+      });
+    } else {
+      setSession({
+        sessionTitle: "My Sketch",
+        strokePlan: mockStrokePlan,
+      });
+    }
+  }, [setSession, referenceImageUrl]);
 
   return (
     <motion.div
