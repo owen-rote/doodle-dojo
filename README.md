@@ -22,7 +22,7 @@ Paste your demo links here.
 
 ### Animation Demo
 
-`Add link`
+![Pikachu Animation](readme_resources/pikachu_video.gif)
 
 ### Live Coach Demo
 
@@ -97,7 +97,6 @@ cd frontend
 npm install
 npm run dev
 ```
-<<<<<<< HEAD
 
 Frontend will be available at:
 
