@@ -10,18 +10,30 @@ function useFadeUp() {
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
+
+    // Fallback: if IntersectionObserver is slow (iPadOS Safari),
+    // force visibility after a short delay
+    const fallbackTimer = setTimeout(() => {
+      el.classList.add("opacity-100", "translate-y-0");
+      el.classList.remove("opacity-0", "translate-y-8");
+    }, 1500);
+
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
+          clearTimeout(fallbackTimer);
           el.classList.add("opacity-100", "translate-y-0");
           el.classList.remove("opacity-0", "translate-y-8");
           observer.unobserve(el);
         }
       },
-      { threshold: 0.15 }
+      { threshold: 0.05, rootMargin: "0px 0px 100px 0px" }
     );
     observer.observe(el);
-    return () => observer.disconnect();
+    return () => {
+      clearTimeout(fallbackTimer);
+      observer.disconnect();
+    };
   }, []);
   return ref;
 }
