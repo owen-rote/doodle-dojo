@@ -35,4 +35,8 @@ npm install
 
 # Run
 npm run dev
+<<<<<<< HEAD
 ```
+=======
+```
+>>>>>>> 4d98d2adf72aafd04aa3554bde111e4eca184666
