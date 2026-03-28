@@ -54,7 +54,7 @@ doodledojo/
 
 - Frontend: `Next.js 16`, `React 19`, `TypeScript`, `Tailwind CSS 4`, `Framer Motion`, `Konva`, `Zustand`
 - Backend: `FastAPI`, `Python 3.12`, `uv`, `google-genai`
-- Gemini: `Nano Banana 2`, `Gemini Live`, `Veo 3`, `Lyria 3`
+- Gemini: `Nano Banana 2`, `Lyria 3 Pro preview`, `Gemini 3.1`, `Veo 3.1`
 
 ## How It Works
 
