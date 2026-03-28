@@ -371,12 +371,12 @@ function StartDrawingSection() {
           mode: params.inputType,
         });
 
-        // Send reference image to backend (non-blocking — don't delay navigation)
-        fetch("/api/upload-reference", {
+        // Wait for backend to process the reference image and generate stroke guides
+        await fetch("/api/upload-reference", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ image: data.image, mimeType: data.mimeType }),
-        }).catch((err) => console.error("Backend upload failed:", err));
+        });
 
         // Complete the progress bar and navigate
         setLoadingProgress(100);
