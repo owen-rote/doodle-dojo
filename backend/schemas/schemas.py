@@ -15,9 +15,12 @@ class StrokeInfo(BaseModel):
 
 
 class IngestReferenceImageResponse(BaseModel):
-    stroke_count: int = 0
+    mode: str = ""
     image_width: int = 0
     image_height: int = 0
+    dot_spacing: int = 0
+    stroke_count: int = 0
+    total_dots: int = 0
     strokes: list[StrokeInfo] = []
     message: str = ""
 

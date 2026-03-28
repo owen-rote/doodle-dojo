@@ -18,9 +18,12 @@ async def upload_reference_image(body: IngestReferenceImageRequest) -> IngestRef
     """Run stroke extraction and return the full stroke JSON to the caller."""
     result = stroke_extraction_service.extract_strokes(body.reference_image_base64)
     return IngestReferenceImageResponse(
-        stroke_count=result["stroke_count"],
+        mode=result["mode"],
         image_width=result["image_width"],
         image_height=result["image_height"],
+        dot_spacing=result["dot_spacing"],
+        stroke_count=result["stroke_count"],
+        total_dots=result["total_dots"],
         strokes=result["strokes"],
         message="Success",
     )
