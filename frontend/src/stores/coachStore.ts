@@ -1,16 +1,22 @@
 import { create } from "zustand";
 import type { FeedbackMessage, FeedbackType } from "@/types";
 
+export type LiveConnectionState = "idle" | "connecting" | "live" | "error";
+
 interface CoachState {
   messages: FeedbackMessage[];
   isLoading: boolean;
   voiceEnabled: boolean;
   isPlaying: boolean;
+  liveConnectionState: LiveConnectionState;
+  liveMessage: string;
 
   addMessage: (type: FeedbackType, text: string) => void;
   clearMessages: () => void;
   toggleVoice: () => void;
   setPlaying: (playing: boolean) => void;
+  setLiveConnectionState: (state: LiveConnectionState) => void;
+  setLiveMessage: (message: string) => void;
 }
 
 export const useCoachStore = create<CoachState>((set) => ({
@@ -18,6 +24,8 @@ export const useCoachStore = create<CoachState>((set) => ({
   isLoading: false,
   voiceEnabled: false,
   isPlaying: false,
+  liveConnectionState: "idle",
+  liveMessage: "",
 
   addMessage: (type, text) =>
     set((state) => ({
@@ -29,10 +37,12 @@ export const useCoachStore = create<CoachState>((set) => ({
           text,
           timestamp: Date.now(),
         },
-      ].slice(-5), // Keep only last 5 messages
+      ].slice(-5),
     })),
 
   clearMessages: () => set({ messages: [] }),
   toggleVoice: () => set((state) => ({ voiceEnabled: !state.voiceEnabled })),
   setPlaying: (playing) => set({ isPlaying: playing }),
+  setLiveConnectionState: (liveConnectionState) => set({ liveConnectionState }),
+  setLiveMessage: (liveMessage) => set({ liveMessage }),
 }));

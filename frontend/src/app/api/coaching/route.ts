@@ -7,7 +7,7 @@ export async function POST(request: Request) {
   // When GEMINI_API_KEY is set, call Gemini Flash for real coaching.
   // For now, return contextual fallback messages.
 
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
 
   if (apiKey) {
     try {

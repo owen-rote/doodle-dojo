@@ -8,10 +8,21 @@ export default function MinWidthGuard({ children }: { children: React.ReactNode 
   const [tooSmall, setTooSmall] = useState(false);
 
   useEffect(() => {
-    const check = () => setTooSmall(window.innerWidth < MIN_WIDTH);
+    const check = () => {
+      // Use the larger of innerWidth and screen dimensions to handle
+      // iPadOS Safari where innerWidth can underreport in landscape
+      const viewportWidth = window.innerWidth;
+      const screenLandscape = Math.max(screen.width, screen.height);
+      const effectiveWidth = Math.max(viewportWidth, screenLandscape);
+      setTooSmall(effectiveWidth < MIN_WIDTH);
+    };
     check();
     window.addEventListener("resize", check);
-    return () => window.removeEventListener("resize", check);
+    window.addEventListener("orientationchange", check);
+    return () => {
+      window.removeEventListener("resize", check);
+      window.removeEventListener("orientationchange", check);
+    };
   }, []);
 
   if (tooSmall) {
