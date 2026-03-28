@@ -25,7 +25,7 @@ async def upload_reference_image(body: IngestReferenceImageRequest) -> IngestRef
 
     Pipeline:
     1. Gemini converts the photo into a simple dotted-line sketch.
-    2. The sketch is split into per-color layers (black on transparent).
+    2. The sketch is split into per-color layers (one canonical color on transparent).
     3. Layers are stored in memory and returned to the caller.
     """
     global _stroke_images_memory

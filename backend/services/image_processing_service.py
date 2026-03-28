@@ -1,169 +1,243 @@
 import base64
+import colorsys
 import io
 
 import numpy as np
 from PIL import Image
-from scipy.ndimage import distance_transform_edt
-from sklearn.cluster import KMeans
 
-_N_COLORS = 14
-_BACKGROUND_DELTA_THRESHOLD = 25.0
-_MIN_STRONG_DELTA = 40.0
-_MIN_ALPHA = 0.55
-_SEED_ALPHA = 0.72
-_RANDOM_STATE = 7
-_ALIASED_COSINE_THRESHOLD = 0.97
-_ALIASED_MAX_STRENGTH_RATIO = 0.65
+_WHITE_DISTANCE_THRESHOLD = 28.0
+_MIN_SATURATION = 0.10
+_HUE_TOLERANCE = 0.045
+_SATURATION_TOLERANCE = 0.24
+_VALUE_TOLERANCE = 0.34
+_GRAY_VALUE_TOLERANCE = 0.14
+_GRAY_SATURATION_TOLERANCE = 0.10
+_MIN_PIXELS_PER_GROUP = 20
+_MAX_STROKE_GROUPS = 20
+_DISPLAY_PALETTE = np.asarray(
+    [
+        [255, 0, 0],
+        [0, 200, 0],
+        [0, 110, 255],
+        [255, 140, 0],
+        [180, 0, 255],
+        [0, 220, 220],
+        [255, 0, 170],
+        [200, 220, 0],
+        [255, 255, 0],
+        [0, 255, 120],
+        [255, 80, 80],
+        [80, 80, 255],
+        [255, 0, 255],
+        [0, 255, 255],
+        [255, 180, 0],
+        [120, 255, 0],
+        [255, 0, 90],
+        [120, 0, 255],
+        [0, 170, 255],
+        [255, 60, 0],
+    ],
+    dtype=np.uint8,
+)
 
 
-def _merge_similar_colors(colors: np.ndarray, min_distance: float = 18.0) -> np.ndarray:
-    kept: list[np.ndarray] = []
-    for color in colors:
-        if not kept:
-            kept.append(color)
+def _distance_from_white(colors: np.ndarray) -> np.ndarray:
+    return np.linalg.norm(255.0 - colors.astype(np.float32), axis=1)
+
+
+def _rgb_to_hsv(colors: np.ndarray) -> np.ndarray:
+    normalized = colors.astype(np.float32) / 255.0
+    return np.asarray([colorsys.rgb_to_hsv(*pixel) for pixel in normalized], dtype=np.float32)
+
+
+def _hue_distance(a: float, b: float) -> float:
+    raw = abs(a - b)
+    return min(raw, 1.0 - raw)
+
+
+def _is_background(color: np.ndarray) -> bool:
+    return float(_distance_from_white(color.reshape(1, 3))[0]) < _WHITE_DISTANCE_THRESHOLD
+
+
+def _group_shades(unique_colors: np.ndarray, counts: np.ndarray) -> list[dict]:
+    hsv_colors = _rgb_to_hsv(unique_colors)
+    color_strength = _distance_from_white(unique_colors)
+    groups: list[dict] = []
+
+    for color_index in np.argsort(counts)[::-1]:
+        color = unique_colors[color_index]
+        if _is_background(color):
             continue
-        distances = [np.linalg.norm(color.astype(np.float32) - other.astype(np.float32)) for other in kept]
-        if min(distances) >= min_distance:
-            kept.append(color)
-    return np.asarray(kept, dtype=np.uint8)
 
+        hue, saturation, value = hsv_colors[color_index]
+        best_group = None
+        best_score = None
 
-def _remove_aliased_palette_colors(colors: np.ndarray) -> np.ndarray:
-    deltas = 255.0 - colors.astype(np.float32)
-    strengths = np.linalg.norm(deltas, axis=1)
-    with np.errstate(divide="ignore", invalid="ignore"):
-        normalized = deltas / strengths[:, None]
-
-    cosine_sim = normalized @ normalized.T
-    keep = np.ones(len(colors), dtype=bool)
-
-    for i in range(len(colors)):
-        if not keep[i]:
-            continue
-        for j in range(i + 1, len(colors)):
-            if not keep[j]:
-                continue
-            if cosine_sim[i, j] < _ALIASED_COSINE_THRESHOLD:
-                continue
-            ratio = min(strengths[i], strengths[j]) / max(strengths[i], strengths[j])
-            if ratio > _ALIASED_MAX_STRENGTH_RATIO:
-                continue
-            if strengths[i] >= strengths[j]:
-                keep[j] = False
+        for group in groups:
+            base_hue, base_saturation, base_value = group["anchor_hsv"]
+            if min(float(saturation), float(base_saturation)) < _MIN_SATURATION:
+                hue_match = True
+                sat_match = abs(float(saturation) - float(base_saturation)) <= _GRAY_SATURATION_TOLERANCE
+                value_match = abs(float(value) - float(base_value)) <= _GRAY_VALUE_TOLERANCE
             else:
-                keep[i] = False
-                break
+                hue_match = _hue_distance(float(hue), float(base_hue)) <= _HUE_TOLERANCE
+                sat_match = abs(float(saturation) - float(base_saturation)) <= _SATURATION_TOLERANCE
+                value_match = abs(float(value) - float(base_value)) <= _VALUE_TOLERANCE
 
-    return colors[keep]
+            if not (hue_match and sat_match and value_match):
+                continue
 
+            score = _hue_distance(float(hue), float(base_hue))
+            score += abs(float(saturation) - float(base_saturation))
+            score += abs(float(value) - float(base_value))
+            if best_score is None or score < best_score:
+                best_score = score
+                best_group = group
 
-def _discover_palette(pixels: np.ndarray) -> np.ndarray:
-    flat_pixels = pixels.reshape(-1, 3).astype(np.float32)
-    delta_from_white = 255.0 - flat_pixels
-    delta_strength = np.linalg.norm(delta_from_white, axis=1)
+        if best_group is None:
+            groups.append({"anchor_hsv": hsv_colors[color_index], "members": [color_index]})
+        else:
+            best_group["members"].append(color_index)
 
-    strong_pixels = delta_from_white[delta_strength > _MIN_STRONG_DELTA]
-    if len(strong_pixels) < _N_COLORS:
-        raise ValueError("Not enough colored pixels to infer the palette.")
+    grouped_colors: list[dict] = []
+    for group in groups:
+        member_indexes = np.asarray(group["members"], dtype=np.int32)
+        total_pixels = int(counts[member_indexes].sum())
+        if total_pixels < _MIN_PIXELS_PER_GROUP:
+            continue
 
-    normalized = strong_pixels / np.linalg.norm(strong_pixels, axis=1, keepdims=True)
-    model = KMeans(n_clusters=_N_COLORS, n_init=20, random_state=_RANDOM_STATE)
-    labels = model.fit_predict(normalized)
+        strongest_member = member_indexes[np.argmax(color_strength[member_indexes])]
+        grouped_colors.append(
+            {
+                "member_indexes": member_indexes,
+                "canonical_color": unique_colors[strongest_member],
+                "anchor_hsv": np.average(hsv_colors[member_indexes], axis=0, weights=counts[member_indexes]),
+                "total_pixels": total_pixels,
+            }
+        )
 
-    palette = []
-    for cluster_index in range(_N_COLORS):
-        cluster = strong_pixels[labels == cluster_index]
-        representative_delta = np.percentile(cluster, 98, axis=0)
-        representative_color = np.clip(255.0 - representative_delta, 0, 255).round().astype(np.uint8)
-        palette.append(representative_color)
-
-    palette = np.asarray(palette, dtype=np.uint8)
-    palette = palette[np.argsort(np.sum(255 - palette, axis=1))]
-    palette = _merge_similar_colors(palette)
-    palette = _remove_aliased_palette_colors(palette)
-    return palette
-
-
-def _classify_pixels(pixels: np.ndarray, palette: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    flat_pixels = pixels.reshape(-1, 3).astype(np.float32)
-    delta_from_white = 255.0 - flat_pixels
-    delta_strength = np.linalg.norm(delta_from_white, axis=1)
-
-    palette_delta = 255.0 - palette.astype(np.float32)
-    denom = np.sum(palette_delta * palette_delta, axis=1)
-
-    alpha = (delta_from_white @ palette_delta.T) / denom
-    alpha = np.clip(alpha, 0.0, 1.0)
-
-    reconstructions = 255.0 - alpha[:, :, None] * palette_delta[None, :, :]
-    reconstruction_error = np.linalg.norm(flat_pixels[:, None, :] - reconstructions, axis=2)
-    best_match = reconstruction_error.argmin(axis=1)
-    best_alpha = alpha[np.arange(len(flat_pixels)), best_match]
-
-    foreground_mask = (delta_strength >= _BACKGROUND_DELTA_THRESHOLD) & (best_alpha >= _MIN_ALPHA)
-    return best_match, best_alpha, foreground_mask
+    grouped_colors.sort(key=lambda group: group["total_pixels"], reverse=True)
+    return grouped_colors
 
 
-def _hard_dealias(pixels: np.ndarray, palette: np.ndarray) -> np.ndarray:
-    height, width = pixels.shape[:2]
-    best_match, best_alpha, foreground_mask = _classify_pixels(pixels, palette)
+def _group_distance(left: dict, right: dict) -> float:
+    left_h, left_s, left_v = left["anchor_hsv"]
+    right_h, right_s, right_v = right["anchor_hsv"]
+    return (
+        (_hue_distance(float(left_h), float(right_h)) * 2.0)
+        + abs(float(left_s) - float(right_s))
+        + abs(float(left_v) - float(right_v))
+    )
 
-    seed_mask = foreground_mask & (best_alpha >= _SEED_ALPHA)
-    labels = np.full(height * width, -1, dtype=np.int32)
-    labels[seed_mask] = best_match[seed_mask]
 
-    foreground_2d = foreground_mask.reshape(height, width)
-    seed_2d = seed_mask.reshape(height, width)
-    labels_2d = labels.reshape(height, width)
+def _merge_groups_to_max(
+    groups: list[dict],
+    unique_colors: np.ndarray,
+    counts: np.ndarray,
+) -> list[dict]:
+    if len(groups) <= _MAX_STROKE_GROUPS:
+        return groups
 
-    if seed_2d.any():
-        _, nearest_seed_indices = distance_transform_edt(~seed_2d, return_indices=True)
-        nearest_rows, nearest_cols = nearest_seed_indices
-        propagated_labels = labels_2d[nearest_rows, nearest_cols]
-        final_labels = np.where(foreground_2d, propagated_labels, -1)
-    else:
-        final_labels = np.where(foreground_2d, best_match.reshape(height, width), -1)
+    color_strength = _distance_from_white(unique_colors)
+    merged_groups = [
+        {
+            "member_indexes": np.asarray(group["member_indexes"], dtype=np.int32),
+            "canonical_color": np.asarray(group["canonical_color"], dtype=np.uint8),
+            "anchor_hsv": np.asarray(group["anchor_hsv"], dtype=np.float32),
+            "total_pixels": int(group["total_pixels"]),
+        }
+        for group in groups
+    ]
 
-    result = np.full((height, width, 3), 255, dtype=np.uint8)
-    colored_mask = final_labels >= 0
-    result[colored_mask] = palette[final_labels[colored_mask]]
-    return result
+    while len(merged_groups) > _MAX_STROKE_GROUPS:
+        smallest_index = min(range(len(merged_groups)), key=lambda index: merged_groups[index]["total_pixels"])
+        smallest_group = merged_groups[smallest_index]
+
+        candidate_indexes = [index for index in range(len(merged_groups)) if index != smallest_index]
+        merge_into_index = min(candidate_indexes, key=lambda index: _group_distance(smallest_group, merged_groups[index]))
+        target_group = merged_groups[merge_into_index]
+
+        combined_members = np.concatenate([target_group["member_indexes"], smallest_group["member_indexes"]])
+        strongest_member = combined_members[np.argmax(color_strength[combined_members])]
+        combined_weights = counts[combined_members]
+
+        target_group["member_indexes"] = combined_members
+        target_group["canonical_color"] = unique_colors[strongest_member]
+        target_group["anchor_hsv"] = np.average(
+            _rgb_to_hsv(unique_colors[combined_members]),
+            axis=0,
+            weights=combined_weights,
+        )
+        target_group["total_pixels"] = int(combined_weights.sum())
+
+        del merged_groups[smallest_index]
+
+    merged_groups.sort(key=lambda group: group["total_pixels"], reverse=True)
+    return merged_groups
+
+
+def _apply_display_palette(groups: list[dict]) -> list[dict]:
+    recolored_groups: list[dict] = []
+    for index, group in enumerate(groups):
+        recolored_group = dict(group)
+        recolored_group["display_color"] = _DISPLAY_PALETTE[index % len(_DISPLAY_PALETTE)]
+        recolored_groups.append(recolored_group)
+    return recolored_groups
 
 
 def split_sketch_by_color(img: Image.Image) -> list[str]:
-    """Deconstruct a multi-colored sketch into spatially-synchronized color layers.
+    """Return one transparent PNG data URL per perceived stroke color.
 
-    Each layer contains only the pixels belonging to one palette color, rendered as
-    black on a transparent background and returned as a base64-encoded PNG data URL.
+    Lighter or darker pixels from the same stroke color are grouped together so
+    anti-aliased edges do not become separate stroke layers.
     """
-    pixels = np.asarray(img.convert("RGB"), dtype=np.uint8)
-    palette = _discover_palette(pixels)
-    dealiased = _hard_dealias(pixels, palette)
+    rgba = np.asarray(img.convert("RGBA"), dtype=np.uint8)
+    rgb = rgba[:, :, :3]
+    alpha = rgba[:, :, 3]
 
-    h, w = dealiased.shape[:2]
-    data_urls: list[str] = []
+    visible_mask = alpha > 0
+    flat_rgb = rgb.reshape(-1, 3)
+    flat_visible = visible_mask.reshape(-1)
+    visible_pixels = flat_rgb[flat_visible]
 
-    for color in palette:
-        mask = np.all(dealiased == color, axis=2)
+    if len(visible_pixels) == 0:
+        return []
 
-        layer = np.zeros((h, w, 4), dtype=np.uint8)
-        layer[mask] = [0, 0, 0, 255]
+    unique_colors, counts = np.unique(visible_pixels, axis=0, return_counts=True)
+    color_groups = _group_shades(unique_colors, counts)
+    color_groups = _merge_groups_to_max(color_groups, unique_colors, counts)
+    color_groups = _apply_display_palette(color_groups)
+    if not color_groups:
+        return []
 
-        layer_img = Image.fromarray(layer, mode="RGBA")
-        buf = io.BytesIO()
-        layer_img.save(buf, format="PNG")
-        b64 = base64.b64encode(buf.getvalue()).decode("ascii")
-        data_urls.append(f"data:image/png;base64,{b64}")
+    color_to_group: dict[tuple[int, int, int], int] = {}
+    for group_index, group in enumerate(color_groups):
+        for member_index in group["member_indexes"]:
+            key = tuple(int(channel) for channel in unique_colors[member_index])
+            color_to_group[key] = group_index
 
-    return data_urls
+    height, width = rgb.shape[:2]
+    flat_group_indexes = np.full(len(flat_rgb), -1, dtype=np.int32)
+    for pixel_index, is_visible in enumerate(flat_visible):
+        if not is_visible:
+            continue
+        color_key = tuple(int(channel) for channel in flat_rgb[pixel_index])
+        flat_group_indexes[pixel_index] = color_to_group.get(color_key, -1)
 
+    layer_urls: list[str] = []
+    for group_index, group in enumerate(color_groups):
+        mask = flat_group_indexes.reshape(height, width) == group_index
+        if not mask.any():
+            continue
 
-if __name__ == "__main__":
-    img = Image.open("services/image.png")
-    layers = split_sketch_by_color(img)
-    # save to disk for inspection
-    for i, layer in enumerate(layers):
-        header, b64data = layer.split(",", 1)
-        img_data = base64.b64decode(b64data)
-        with open(f"layer_{i}.png", "wb") as f:
-            f.write(img_data)
+        layer = np.zeros((height, width, 4), dtype=np.uint8)
+        display_color = np.asarray(group["display_color"], dtype=np.uint8)
+        layer[mask, :3] = display_color
+        layer[mask, 3] = 255
+
+        buffer = io.BytesIO()
+        Image.fromarray(layer, mode="RGBA").save(buffer, format="PNG")
+        encoded = base64.b64encode(buffer.getvalue()).decode("ascii")
+        layer_urls.append(f"data:image/png;base64,{encoded}")
+
+    return layer_urls

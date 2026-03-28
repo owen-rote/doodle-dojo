@@ -25,7 +25,16 @@ async def ingest_reference_image(request: IngestReferenceImageRequest) -> Image.
     """
     image_bytes = base64.b64decode(extract_base64_data(request.reference_image_base64))
     input_image = Image.open(io.BytesIO(image_bytes))
-    prompt = "use this picture, convert it into dotted strokes for beginners, each new stroke is a different color. Do NOT add any numbers"
+    prompt = (
+        "Use this picture to create a beginner dotted stroke guide. "
+        "Each stroke must be a different color. "
+        "Draw strokes using dots only. "
+        "Do not connect dots with lines. "
+        "Do not draw outlines, curves, sketch lines, shadows, glow, texture, or gradients. "
+        "Each stroke should appear only as separated, clearly visible, filled circular dots. "
+        "Keep the background plain white. "
+        "Do NOT add any numbers, labels, arrows, or text."
+    )
 
     response = await client.aio.models.generate_content(
         model="gemini-3.1-flash-image-preview",
@@ -38,16 +47,7 @@ async def ingest_reference_image(request: IngestReferenceImageRequest) -> Image.
         ),
     )
 
-    # TODO, for now save the image as GENERATED.png
-    with open("GENERATED.png", "wb") as f:
-        for part in response.candidates[0].content.parts:
-            if getattr(part, "inline_data", None):
-                f.write(part.inline_data.data)
-
     parts = []
-    output_images: list[str] = []
-
-    # Preferred response shape from Gemini docs.
     for part in getattr(response, "parts", []) or []:
         if getattr(part, "inline_data", None):
             parts.append(part)
@@ -59,8 +59,11 @@ async def ingest_reference_image(request: IngestReferenceImageRequest) -> Image.
     if not parts:
         raise ValueError("Gemini did not return an image for the reference sketch.")
 
-    sketch_img = Image.open(io.BytesIO(parts[0].inline_data.data))
-    return sketch_img
+    image_bytes = parts[0].inline_data.data
+    generated_path = Path(__file__).resolve().parent.parent / "GENERATED.png"
+    generated_path.write_bytes(image_bytes)
+    return Image.open(io.BytesIO(image_bytes)).convert("RGBA")
+
 
 
 async def send_chat(request: SendChatRequest) -> SendChatResponse:
