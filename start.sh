@@ -14,18 +14,23 @@ ensure_uv() {
     return
   fi
 
-  if ! command -v curl >/dev/null 2>&1; then
-    log "ERROR: uv is missing and curl is not available to install it."
+  log "uv not found. Installing uv..."
+
+  if command -v curl >/dev/null 2>&1; then
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+  elif command -v pip3 >/dev/null 2>&1; then
+    pip3 install --quiet uv
+  elif command -v pip >/dev/null 2>&1; then
+    pip install --quiet uv
+  else
+    log "ERROR: uv is missing and no installer (curl, pip3, pip) is available."
     exit 1
   fi
-
-  log "uv not found. Installing uv..."
-  curl -LsSf https://astral.sh/uv/install.sh | sh
 
   export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
 
   if ! command -v uv >/dev/null 2>&1; then
-    log "ERROR: uv installation completed but uv is still not on PATH."
+    log "ERROR: uv was installed but is still not on PATH."
     exit 1
   fi
 }
