@@ -1,6 +1,6 @@
 [phases.setup]
-nixPkgs = ["nodejs_22", "python312"]
-cmds = ["pip3 install uv || curl -LsSf https://astral.sh/uv/install.sh | sh || true"]
+nixPkgs = ["nodejs_22", "python312", "curl", "cacert"]
+cmds = ["curl -LsSf https://astral.sh/uv/install.sh | sh"]
 
 [start]
 cmd = "./start.sh"
