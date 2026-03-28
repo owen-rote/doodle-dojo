@@ -426,74 +426,88 @@ function StartDrawingSection() {
                 See how your image will be transformed, then pick a style
               </p>
 
-              {/* Three example images side-by-side */}
-              <div className="grid grid-cols-3 gap-4 lg:gap-6">
-                {/* Original */}
-                <div className="flex flex-col items-center">
-                  <div className="relative w-full overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-3 backdrop-blur-md">
+              {/* Input image → Style options layout */}
+              <div className="flex items-center justify-center gap-4 lg:gap-6">
+                {/* Input: Original image */}
+                <div className="flex w-[200px] shrink-0 flex-col items-center">
+                  <div className="relative w-full overflow-hidden rounded-2xl border border-dashed border-white/20 bg-white/[0.03] p-3">
+                    <div className="absolute left-3 top-3 z-10 rounded-md bg-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-white/50 backdrop-blur-sm">
+                      Input
+                    </div>
                     <img
-                      src="/mock/style-original.svg"
+                      src="/mock/royce-hall-original.webp"
                       alt="Original image"
-                      className="aspect-square w-full rounded-xl object-cover"
+                      className="aspect-square w-full rounded-xl object-cover opacity-70"
                     />
                   </div>
-                  <p className="mt-3 text-sm font-medium text-gray-400">Original</p>
+                  <p className="mt-3 text-xs font-medium text-gray-500">Your image</p>
                 </div>
 
-                {/* Style 1: Black & White Sketch */}
-                <div className="flex flex-col items-center">
-                  <button
-                    onClick={() => handleStyleSelect("bw")}
-                    className={`relative w-full overflow-hidden rounded-2xl border-2 p-3 backdrop-blur-md transition-all duration-300 ${
-                      selectedStyle === "bw"
-                        ? "border-purple-500 bg-purple-500/10 shadow-[0_0_30px_rgba(168,85,247,0.2)]"
-                        : "border-white/10 bg-white/5 hover:border-purple-500/40"
-                    }`}
-                  >
-                    {selectedStyle === "bw" && (
-                      <div className="absolute right-3 top-3 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-purple-600">
-                        <svg className="h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                        </svg>
-                      </div>
-                    )}
-                    <img
-                      src="/mock/style-bw-sketch.svg"
-                      alt="Black & White Sketch"
-                      className="aspect-square w-full rounded-xl object-cover"
-                    />
-                  </button>
-                  <p className={`mt-3 text-sm font-semibold ${selectedStyle === "bw" ? "text-purple-400" : "text-white"}`}>
-                    Black &amp; White Sketch
-                  </p>
+                {/* Arrow */}
+                <div className="flex flex-col items-center gap-1 text-white/20">
+                  <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+                  </svg>
+                  <span className="text-[10px] font-medium uppercase tracking-wider text-white/25">becomes</span>
                 </div>
 
-                {/* Style 2: Colored Sketch */}
-                <div className="flex flex-col items-center">
-                  <button
-                    onClick={() => handleStyleSelect("colored")}
-                    className={`relative w-full overflow-hidden rounded-2xl border-2 p-3 backdrop-blur-md transition-all duration-300 ${
-                      selectedStyle === "colored"
-                        ? "border-purple-500 bg-purple-500/10 shadow-[0_0_30px_rgba(168,85,247,0.2)]"
-                        : "border-white/10 bg-white/5 hover:border-purple-500/40"
-                    }`}
-                  >
-                    {selectedStyle === "colored" && (
-                      <div className="absolute right-3 top-3 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-purple-600">
-                        <svg className="h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                        </svg>
-                      </div>
-                    )}
-                    <img
-                      src="/mock/style-colored-sketch.svg"
-                      alt="Colored Sketch"
-                      className="aspect-square w-full rounded-xl object-cover"
-                    />
-                  </button>
-                  <p className={`mt-3 text-sm font-semibold ${selectedStyle === "colored" ? "text-purple-400" : "text-white"}`}>
-                    Colored Sketch
-                  </p>
+                {/* Style options */}
+                <div className="grid grid-cols-2 gap-4 lg:gap-6">
+                  {/* Style 1: Black & White Sketch */}
+                  <div className="flex flex-col items-center">
+                    <button
+                      onClick={() => handleStyleSelect("bw")}
+                      className={`relative w-full overflow-hidden rounded-2xl border-2 p-3 backdrop-blur-md transition-all duration-300 ${
+                        selectedStyle === "bw"
+                          ? "border-purple-500 bg-purple-500/10 shadow-[0_0_30px_rgba(168,85,247,0.2)]"
+                          : "border-white/10 bg-white/5 hover:border-purple-500/40"
+                      }`}
+                    >
+                      {selectedStyle === "bw" && (
+                        <div className="absolute right-3 top-3 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-purple-600">
+                          <svg className="h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                          </svg>
+                        </div>
+                      )}
+                      <img
+                        src="/mock/royce-hall-bw.webp"
+                        alt="Black & White Sketch"
+                        className="aspect-square w-full rounded-xl object-cover"
+                      />
+                    </button>
+                    <p className={`mt-3 text-sm font-semibold ${selectedStyle === "bw" ? "text-purple-400" : "text-white"}`}>
+                      Black &amp; White Sketch
+                    </p>
+                  </div>
+
+                  {/* Style 2: Colored Sketch */}
+                  <div className="flex flex-col items-center">
+                    <button
+                      onClick={() => handleStyleSelect("colored")}
+                      className={`relative w-full overflow-hidden rounded-2xl border-2 p-3 backdrop-blur-md transition-all duration-300 ${
+                        selectedStyle === "colored"
+                          ? "border-purple-500 bg-purple-500/10 shadow-[0_0_30px_rgba(168,85,247,0.2)]"
+                          : "border-white/10 bg-white/5 hover:border-purple-500/40"
+                      }`}
+                    >
+                      {selectedStyle === "colored" && (
+                        <div className="absolute right-3 top-3 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-purple-600">
+                          <svg className="h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                          </svg>
+                        </div>
+                      )}
+                      <img
+                        src="/mock/royce-hall-colored.webp"
+                        alt="Colored Sketch"
+                        className="aspect-square w-full rounded-xl object-cover"
+                      />
+                    </button>
+                    <p className={`mt-3 text-sm font-semibold ${selectedStyle === "colored" ? "text-purple-400" : "text-white"}`}>
+                      Colored Sketch
+                    </p>
+                  </div>
                 </div>
               </div>
 
