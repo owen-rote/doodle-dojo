@@ -2,6 +2,7 @@ import { create } from "zustand";
 import type { FeedbackMessage, FeedbackType } from "@/types";
 
 export type LiveConnectionState = "idle" | "connecting" | "live" | "error";
+export type MusicState = "idle" | "connecting" | "playing" | "muted";
 
 interface CoachState {
   messages: FeedbackMessage[];
@@ -10,6 +11,8 @@ interface CoachState {
   isPlaying: boolean;
   liveConnectionState: LiveConnectionState;
   liveMessage: string;
+  musicState: MusicState;
+  musicEnabled: boolean;
 
   addMessage: (type: FeedbackType, text: string) => void;
   clearMessages: () => void;
@@ -17,6 +20,8 @@ interface CoachState {
   setPlaying: (playing: boolean) => void;
   setLiveConnectionState: (state: LiveConnectionState) => void;
   setLiveMessage: (message: string) => void;
+  setMusicState: (state: MusicState) => void;
+  toggleMusic: () => void;
 }
 
 export const useCoachStore = create<CoachState>((set) => ({
@@ -40,9 +45,14 @@ export const useCoachStore = create<CoachState>((set) => ({
       ].slice(-5),
     })),
 
+  musicState: "idle",
+  musicEnabled: true,
+
   clearMessages: () => set({ messages: [] }),
   toggleVoice: () => set((state) => ({ voiceEnabled: !state.voiceEnabled })),
   setPlaying: (playing) => set({ isPlaying: playing }),
   setLiveConnectionState: (liveConnectionState) => set({ liveConnectionState }),
   setLiveMessage: (liveMessage) => set({ liveMessage }),
+  setMusicState: (musicState) => set({ musicState }),
+  toggleMusic: () => set((state) => ({ musicEnabled: !state.musicEnabled })),
 }));

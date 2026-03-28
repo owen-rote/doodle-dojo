@@ -8,6 +8,7 @@ import { useSessionStore } from "@/stores/sessionStore";
 import { mockStrokePlan } from "@/lib/mockStrokePlan";
 import { useGeminiLiveSession } from "@/hooks/useGeminiLiveSession";
 import { useStrokeGuide } from "@/hooks/useStrokeGuide";
+import { useLyriaSession } from "@/hooks/useLyriaSession";
 import { downloadDataUrl, exportStageSnapshot } from "@/lib/canvasExport";
 import SessionHeader from "./SessionHeader";
 import ReferencePanel from "./ReferencePanel";
@@ -41,6 +42,7 @@ export default function DrawingSession() {
   const referenceImageUrl = useSessionStore((s) => s.referenceImageUrl);
   const { prepareVoicePlayback } = useGeminiLiveSession();
   useStrokeGuide();
+  const { prepareMusicPlayback } = useLyriaSession();
 
   // Load mock data only if no reference image was set from the home page
   useEffect(() => {
@@ -120,7 +122,12 @@ export default function DrawingSession() {
       />
 
       <div className="flex flex-1 overflow-hidden">
-        <ReferencePanel onBeforeVoiceEnable={prepareVoicePlayback} />
+        <ReferencePanel
+          onBeforeVoiceEnable={() => {
+            prepareVoicePlayback();
+            prepareMusicPlayback();
+          }}
+        />
 
         <main className="relative flex flex-1 flex-col p-4">
           {/* Ambient glow behind canvas */}

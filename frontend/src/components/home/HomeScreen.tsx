@@ -367,6 +367,8 @@ function StartDrawingSection() {
         setSession({
           referenceImageUrl,
           mode: params.inputType,
+          lyriaPrompt: params.inputType === "text" ? (params.textPrompt ?? null) : null,
+          lyriaImageBase64: params.inputType === "image" ? (params.imageBase64 ?? null) : null,
         });
 
         // Wait for backend stroke extraction and store the result

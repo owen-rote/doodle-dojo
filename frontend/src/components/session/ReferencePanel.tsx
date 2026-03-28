@@ -13,7 +13,7 @@ interface ReferencePanelProps {
 }
 
 export default function ReferencePanel({ onBeforeVoiceEnable }: ReferencePanelProps) {
-  const { messages, voiceEnabled, toggleVoice, liveConnectionState, liveMessage } =
+  const { messages, voiceEnabled, toggleVoice, liveConnectionState, liveMessage, musicState, musicEnabled, toggleMusic } =
     useCoachStore();
   const { referenceImageUrl } = useSessionStore();
   const [modalOpen, setModalOpen] = useState(false);
@@ -53,6 +53,80 @@ export default function ReferencePanel({ onBeforeVoiceEnable }: ReferencePanelPr
         onToggle={toggleVoice}
         onBeforeVoiceEnable={onBeforeVoiceEnable}
       />
+
+      {/* Music toggle */}
+      <button
+        disabled={musicState === "idle" || musicState === "connecting"}
+        onClick={() => {
+          if (musicState !== "idle" && musicState !== "connecting") toggleMusic();
+        }}
+        className={`flex w-full items-center justify-between rounded-xl border px-4 py-3 transition-all ${
+          musicState === "idle" || musicState === "connecting"
+            ? "cursor-not-allowed border-white/5 bg-white/[0.03] opacity-50"
+            : musicEnabled
+              ? "border-purple-500/30 bg-purple-500/10 hover:bg-purple-500/15"
+              : "border-white/10 bg-white/5 hover:bg-white/8"
+        }`}
+      >
+        <div className="flex items-center gap-2.5">
+          <svg
+            className={`h-4 w-4 ${
+              musicState === "idle" || musicState === "connecting"
+                ? "text-white/20"
+                : musicEnabled
+                  ? "text-purple-400"
+                  : "text-white/40"
+            }`}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M9 18V5l12-2v13" />
+            <circle cx="6" cy="18" r="3" />
+            <circle cx="18" cy="16" r="3" />
+          </svg>
+          <div>
+            <p className={`text-[13px] font-medium ${
+              musicState === "idle" || musicState === "connecting"
+                ? "text-white/20"
+                : musicEnabled ? "text-white/80" : "text-white/40"
+            }`}>
+              Music
+            </p>
+            <p className="text-[11px] text-white/25">
+              {musicState === "connecting"
+                ? "Generating…"
+                : musicState === "muted"
+                  ? "Paused for voice"
+                  : musicState === "playing"
+                    ? musicEnabled ? "Playing" : "Off"
+                    : "Not ready"}
+            </p>
+          </div>
+        </div>
+
+        {/* Toggle pill */}
+        <div
+          className={`relative h-5 w-9 rounded-full transition-colors ${
+            musicState === "idle" || musicState === "connecting"
+              ? "bg-white/10"
+              : musicEnabled
+                ? "bg-purple-500"
+                : "bg-white/15"
+          }`}
+        >
+          <div
+            className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${
+              musicEnabled && musicState !== "idle" && musicState !== "connecting"
+                ? "translate-x-4"
+                : "translate-x-0.5"
+            }`}
+          />
+        </div>
+      </button>
 
       {/* Live feedback text box — shown below voice toggle when voice is OFF */}
       {!voiceEnabled && (

@@ -25,6 +25,10 @@ interface SessionState {
 
   validationMessage: string | null;
 
+  // Lyria music context
+  lyriaPrompt: string | null;
+  lyriaImageBase64: string | null;
+
   setSession: (data: Partial<SessionState>) => void;
   advanceToNextStroke: () => void;
   markStrokeComplete: (index: number) => void;
@@ -45,6 +49,8 @@ export const useSessionStore = create<SessionState>((set) => ({
   guideImageWidth: 0,
   guideImageHeight: 0,
   validationMessage: null,
+  lyriaPrompt: null,
+  lyriaImageBase64: null,
 
   setSession: (data) => set((state) => ({ ...state, ...data })),
 

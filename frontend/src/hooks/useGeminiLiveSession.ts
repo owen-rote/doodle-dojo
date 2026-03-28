@@ -129,9 +129,11 @@ export function useGeminiLiveSession() {
                 // Audio chunks → play when voice enabled
                 if (voiceEnabled && msg.serverContent.modelTurn?.parts) {
                   const player = playerRef.current;
+                  let hadAudio = false;
                   for (const part of msg.serverContent.modelTurn.parts) {
                     const p = part as { inlineData?: { data?: string; mimeType?: string } };
                     if (p.inlineData?.data && p.inlineData.mimeType?.startsWith("audio/")) {
+                      hadAudio = true;
                       if (player) {
                         void player.resume().then(
                           () => player.enqueueBase64Pcm(p.inlineData!.data!),
@@ -140,6 +142,7 @@ export function useGeminiLiveSession() {
                       }
                     }
                   }
+                  if (hadAudio) useCoachStore.getState().setPlaying(true);
                 }
 
                 // Text transcription → show when voice disabled
@@ -151,6 +154,7 @@ export function useGeminiLiveSession() {
 
                 if (msg.serverContent.turnComplete) {
                   captionBuffer.current = "";
+                  useCoachStore.getState().setPlaying(false);
                 }
               }
             },
