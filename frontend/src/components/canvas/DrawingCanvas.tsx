@@ -141,13 +141,27 @@ export default function DrawingCanvas() {
   const guideImageHeight = useSessionStore((s) => s.guideImageHeight);
   const fillImageEl = useImage(fillImageUrl);
 
-  // Current stroke's guide dots, scaled from image coords to canvas coords
-  const guideDots = (() => {
-    const stroke = guideStrokes[currentStrokeIndex];
-    if (!stroke || !guideImageWidth || !guideImageHeight || !size.width || !size.height) return [];
+  const validationMessage = useSessionStore((s) => s.validationMessage);
+
+  // Uniform scale + centering to preserve aspect ratio
+  const uniformLayout = (() => {
+    if (!guideImageWidth || !guideImageHeight || !size.width || !size.height) return null;
     const scaleX = size.width / guideImageWidth;
     const scaleY = size.height / guideImageHeight;
-    return stroke.points.map(([x, y]) => ({ x: x * scaleX, y: y * scaleY }));
+    const scale = Math.min(scaleX, scaleY);
+    const drawWidth = guideImageWidth * scale;
+    const drawHeight = guideImageHeight * scale;
+    const offsetX = (size.width - drawWidth) / 2;
+    const offsetY = (size.height - drawHeight) / 2;
+    return { scale, offsetX, offsetY, drawWidth, drawHeight };
+  })();
+
+  // Current stroke's guide dots, scaled with uniform aspect ratio
+  const guideDots = (() => {
+    const stroke = guideStrokes[currentStrokeIndex];
+    if (!stroke || !uniformLayout) return [];
+    const { scale, offsetX, offsetY } = uniformLayout;
+    return stroke.points.map(([x, y]) => ({ x: x * scale + offsetX, y: y * scale + offsetY }));
   })();
 
   // Track canvas container size
@@ -173,8 +187,15 @@ export default function DrawingCanvas() {
   const getPointerPos = useCallback(() => {
     const stage = stageRef.current;
     if (!stage) return null;
-    return stage.getPointerPosition();
-  }, []);
+    const pos = stage.getPointerPosition();
+    if (!pos || !uniformLayout) return pos;
+    // Clamp to the aspect-ratio-preserved drawing area
+    const { offsetX, offsetY, drawWidth, drawHeight } = uniformLayout;
+    return {
+      x: Math.max(offsetX, Math.min(offsetX + drawWidth, pos.x)),
+      y: Math.max(offsetY, Math.min(offsetY + drawHeight, pos.y)),
+    };
+  }, [uniformLayout]);
 
   // ─── Fill tool handler ───
   const handleFill = useCallback(() => {
@@ -241,6 +262,16 @@ export default function DrawingCanvas() {
         </div>
       )}
 
+      {validationMessage && (
+        <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center">
+          <span className={`rounded-lg px-6 py-3 text-lg font-semibold text-white shadow-lg ${
+            validationMessage.startsWith("Almost") ? "bg-amber-500/90" : "bg-red-500/90"
+          }`}>
+            {validationMessage}
+          </span>
+        </div>
+      )}
+
       {size.width > 0 && size.height > 0 && (
         <Stage
           ref={stageRef}
@@ -254,19 +285,19 @@ export default function DrawingCanvas() {
           onTouchEnd={handleMouseUp}
           style={{ cursor }}
         >
-          {/* Guide dots for the current stroke */}
-          {guideDots.length > 0 && (
+          {/* Guide stroke as a dotted line */}
+          {guideDots.length > 1 && (
             <Layer listening={false}>
-              {guideDots.map((dot, i) => (
-                <Circle
-                  key={i}
-                  x={dot.x}
-                  y={dot.y}
-                  radius={5}
-                  fill="#a855f7"
-                  opacity={0.75}
-                />
-              ))}
+              <Line
+                points={guideDots.flatMap((d) => [d.x, d.y])}
+                stroke="#9CA3AF"
+                strokeWidth={3}
+                dash={[6, 6]}
+                opacity={0.8}
+                lineCap="round"
+                lineJoin="round"
+                tension={0.5}
+              />
             </Layer>
           )}
 

@@ -1,6 +1,13 @@
 import { useCallback } from "react";
 import type { ValidationResult } from "@/types";
 
+// ─── Pixel-based Fréchet distance thresholds (tweak these easily) ───
+/** PASS: distance ≤ this → advance to next stroke */
+export const PASS_THRESHOLD = 120;
+/** RETRY: distance ≤ this → "Almost! Try again" */
+export const RETRY_THRESHOLD = 200;
+/** FAIL: distance > RETRY_THRESHOLD → show guidance */
+
 export function useStrokeValidation() {
   /** Euclidean distance between two points */
   const dist = useCallback(

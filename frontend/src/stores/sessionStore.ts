@@ -23,10 +23,13 @@ interface SessionState {
   guideImageWidth: number;
   guideImageHeight: number;
 
+  validationMessage: string | null;
+
   setSession: (data: Partial<SessionState>) => void;
   advanceToNextStroke: () => void;
   markStrokeComplete: (index: number) => void;
   resetSession: () => void;
+  setValidationMessage: (msg: string | null) => void;
 }
 
 export const useSessionStore = create<SessionState>((set) => ({
@@ -41,6 +44,7 @@ export const useSessionStore = create<SessionState>((set) => ({
   guideStrokes: [],
   guideImageWidth: 0,
   guideImageHeight: 0,
+  validationMessage: null,
 
   setSession: (data) => set((state) => ({ ...state, ...data })),
 
@@ -64,5 +68,8 @@ export const useSessionStore = create<SessionState>((set) => ({
       currentStrokeIndex: 0,
       completedStrokeIndices: [],
       progress: 0,
+      validationMessage: null,
     }),
+
+  setValidationMessage: (msg) => set({ validationMessage: msg }),
 }));

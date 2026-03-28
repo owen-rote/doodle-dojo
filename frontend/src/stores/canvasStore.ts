@@ -28,6 +28,7 @@ interface CanvasState {
   setFillImageUrl: (url: string | null) => void;
   snapshotForUndo: () => void;
   undo: () => void;
+  removeStrokeById: (id: string) => void;
   clearCanvas: () => void;
   setStage: (stage: Konva.Stage | null) => void;
 }
@@ -94,6 +95,11 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
         history: state.history.slice(0, -1),
       };
     }),
+
+  removeStrokeById: (id) =>
+    set((state) => ({
+      userStrokes: state.userStrokes.filter((s) => s.id !== id),
+    })),
 
   clearCanvas: () =>
     set({ userStrokes: [], currentStroke: [], fillImageUrl: null, history: [] }),
