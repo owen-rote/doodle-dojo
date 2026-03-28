@@ -1,13 +1,22 @@
 interface VoiceToggleProps {
   isEnabled: boolean;
   onToggle: () => void;
+  /** Run on user tap when turning voice ON (unlocks Web Audio — required by browsers). */
+  onBeforeVoiceEnable?: () => void;
 }
 
-export default function VoiceToggle({ isEnabled, onToggle }: VoiceToggleProps) {
+export default function VoiceToggle({
+  isEnabled,
+  onToggle,
+  onBeforeVoiceEnable,
+}: VoiceToggleProps) {
   return (
     <button
       type="button"
-      onClick={onToggle}
+      onClick={() => {
+        if (!isEnabled) onBeforeVoiceEnable?.();
+        onToggle();
+      }}
       className={`w-full rounded-lg border px-4 py-2 text-center text-[13px] font-medium transition-all ${
         isEnabled
           ? "border-purple-500/40 bg-purple-500/20 text-purple-300 hover:bg-purple-500/30"

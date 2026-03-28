@@ -6,8 +6,24 @@ import CoachFeedback from "./CoachFeedback";
 import ChatInput from "./ChatInput";
 import VoiceToggle from "./VoiceToggle";
 
-export default function ReferencePanel() {
-  const { messages, voiceEnabled, toggleVoice } = useCoachStore();
+interface ReferencePanelProps {
+  onChatSend: (message: string) => void;
+  onBeforeVoiceEnable?: () => void;
+}
+
+export default function ReferencePanel({
+  onChatSend,
+  onBeforeVoiceEnable,
+}: ReferencePanelProps) {
+  const {
+    messages,
+    voiceEnabled,
+    toggleVoice,
+    liveCaption,
+    liveConnectionState,
+    liveError,
+    liveServerEventsCount,
+  } = useCoachStore();
   const { referenceImageUrl } = useSessionStore();
 
   return (
@@ -33,13 +49,24 @@ export default function ReferencePanel() {
       </div>
 
       {/* Coach Feedback */}
-      <CoachFeedback messages={messages} />
+      <CoachFeedback
+        messages={messages}
+        liveCaption={liveCaption}
+        liveConnectionState={liveConnectionState}
+        liveError={liveError}
+        liveServerEventsCount={liveServerEventsCount}
+        voiceEnabled={voiceEnabled}
+      />
 
       {/* Chat Input */}
-      <ChatInput onSend={(msg) => console.log("Chat:", msg)} />
+      <ChatInput onSend={onChatSend} />
 
       {/* Voice Toggle */}
-      <VoiceToggle isEnabled={voiceEnabled} onToggle={toggleVoice} />
+      <VoiceToggle
+        isEnabled={voiceEnabled}
+        onBeforeVoiceEnable={onBeforeVoiceEnable}
+        onToggle={toggleVoice}
+      />
     </aside>
   );
 }

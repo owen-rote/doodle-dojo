@@ -1,15 +1,18 @@
 "use client";
 
-import { useRef, useEffect, useState, useCallback } from "react";
-import { Stage, Layer, Line } from "react-konva";
+import { useRef, useEffect, useState, useCallback, useMemo } from "react";
+import { Stage, Layer, Line, Circle } from "react-konva";
 import type Konva from "konva";
 import { useCanvasStore } from "@/stores/canvasStore";
+import { guidePointsNormalized } from "@/lib/live/mockGuidePoints";
 
 function effectiveWidth(tool: string, base: number): number {
   if (tool === "brush") return base * 2.5;
   if (tool === "eraser") return base * 4;
   return base;
 }
+
+const NORM_GUIDE = guidePointsNormalized();
 
 export default function DrawingCanvas() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -25,7 +28,16 @@ export default function DrawingCanvas() {
     startDrawing,
     addPoint,
     finishStroke,
+    setKonvaStage,
   } = useCanvasStore();
+
+  const guideDots = useMemo(() => {
+    if (size.width < 8 || size.height < 8) return [];
+    return NORM_GUIDE.map((p) => ({
+      x: p.x * size.width,
+      y: p.y * size.height,
+    }));
+  }, [size.width, size.height]);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -37,6 +49,12 @@ export default function DrawingCanvas() {
     observer.observe(el);
     return () => observer.disconnect();
   }, []);
+
+  useEffect(() => {
+    const stage = stageRef.current;
+    setKonvaStage(stage);
+    return () => setKonvaStage(null);
+  }, [size.width, size.height, setKonvaStage]);
 
   const getPointerPos = useCallback(() => {
     const stage = stageRef.current;
@@ -85,7 +103,19 @@ export default function DrawingCanvas() {
           onTouchEnd={handleMouseUp}
           style={{ cursor: activeTool === "eraser" ? "crosshair" : "default" }}
         >
-          {/* Completed strokes */}
+          <Layer listening={false}>
+            {guideDots.map((pt, i) => (
+              <Circle
+                key={i}
+                x={pt.x}
+                y={pt.y}
+                radius={2.2}
+                fill="rgba(55, 65, 80, 0.38)"
+                listening={false}
+              />
+            ))}
+          </Layer>
+
           <Layer>
             {userStrokes.map((stroke) => (
               <Line
@@ -103,7 +133,6 @@ export default function DrawingCanvas() {
             ))}
           </Layer>
 
-          {/* Current stroke being drawn */}
           <Layer>
             {currentStroke.length >= 4 && (
               <Line

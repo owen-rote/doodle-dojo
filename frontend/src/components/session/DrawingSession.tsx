@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { motion } from "framer-motion";
 import { useCanvasStore } from "@/stores/canvasStore";
 import { useSessionStore } from "@/stores/sessionStore";
+import { useGeminiLiveSession } from "@/hooks/useGeminiLiveSession";
 import { mockStrokePlan } from "@/lib/mockStrokePlan";
 import SessionHeader from "./SessionHeader";
 import ReferencePanel from "./ReferencePanel";
@@ -19,7 +20,11 @@ const DrawingCanvas = dynamic(
 export default function DrawingSession() {
   const { activeTool, setTool, brushSize, setBrushSize, undo, clearCanvas } =
     useCanvasStore();
-  const { progress, sessionTitle, resetSession, setSession } = useSessionStore();
+  const { progress, sessionTitle, resetSession, setSession, referenceImageUrl } =
+    useSessionStore();
+
+  const { sendChat, prepareVoicePlayback } =
+    useGeminiLiveSession(referenceImageUrl);
 
   // Load mock data on mount
   useEffect(() => {
@@ -49,7 +54,10 @@ export default function DrawingSession() {
       />
 
       <div className="flex flex-1 overflow-hidden">
-        <ReferencePanel />
+        <ReferencePanel
+          onChatSend={sendChat}
+          onBeforeVoiceEnable={prepareVoicePlayback}
+        />
 
         <main className="relative flex flex-1 flex-col p-5">
           {/* Ambient glow behind canvas */}
