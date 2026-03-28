@@ -154,27 +154,6 @@ Backend entrypoint:
 - PNG export is supported from the drawing session.
 - Lyria soundtrack support can be steered with lyric or vibe prompts while drawing.
 
-## Known Caveats
 
-- `npm run lint` is not fully configured yet for the current ESLint 9 setup.
-- Lyria may fail if the active Gemini API key does not have access to the required realtime music model.
-- Some backend-driven stroke guide behavior depends on the external backend service being ready before the frontend session starts.
-
-## Future Ideas
-
-- Better persistence for finished sketches and videos
-- Shareable session links
-- Multi-style animation presets
-- More robust music fallback when Lyria access is unavailable
-- Polished onboarding for first-time users
-
-## Contributing
-
-If you contribute, keep changes scoped and verify both apps still run locally:
-
-```bash
-cd backend && uv run uvicorn main:app --reload
-cd frontend && npm run dev
-```
 
 
