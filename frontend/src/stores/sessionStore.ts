@@ -1,6 +1,13 @@
 import { create } from "zustand";
 import type { StrokePlan } from "@/types";
 
+export interface BackendStroke {
+  stroke_id: number;
+  point_count: number;
+  stroke_len_px: number;
+  points: number[][];
+}
+
 interface SessionState {
   sessionId: string | null;
   sessionTitle: string;
@@ -10,18 +17,19 @@ interface SessionState {
   currentStrokeIndex: number;
   completedStrokeIndices: number[];
   progress: number; // 0–100
-  guideImageUrl: string | null; // current stroke overlay image from backend
-  totalStrokes: number; // total strokes returned by backend
+
+  // Stroke guide data from backend
+  guideStrokes: BackendStroke[];
+  guideImageWidth: number;
+  guideImageHeight: number;
 
   setSession: (data: Partial<SessionState>) => void;
   advanceToNextStroke: () => void;
   markStrokeComplete: (index: number) => void;
   resetSession: () => void;
-  setGuideImage: (url: string | null) => void;
-  setTotalStrokes: (n: number) => void;
 }
 
-export const useSessionStore = create<SessionState>((set, get) => ({
+export const useSessionStore = create<SessionState>((set) => ({
   sessionId: null,
   sessionTitle: "",
   mode: "text",
@@ -30,23 +38,21 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   currentStrokeIndex: 0,
   completedStrokeIndices: [],
   progress: 0,
-  guideImageUrl: null,
-  totalStrokes: 0,
+  guideStrokes: [],
+  guideImageWidth: 0,
+  guideImageHeight: 0,
 
   setSession: (data) => set((state) => ({ ...state, ...data })),
 
   advanceToNextStroke: () =>
     set((state) => ({
-      currentStrokeIndex: Math.min(
-        state.currentStrokeIndex + 1,
-        (state.strokePlan?.total_strokes ?? 1) - 1
-      ),
+      currentStrokeIndex: state.currentStrokeIndex + 1,
     })),
 
   markStrokeComplete: (index) =>
     set((state) => {
       const newCompleted = [...state.completedStrokeIndices, index];
-      const total = state.totalStrokes || state.strokePlan?.total_strokes || 1;
+      const total = state.guideStrokes.length || state.strokePlan?.total_strokes || 1;
       return {
         completedStrokeIndices: newCompleted,
         progress: Math.round((newCompleted.length / total) * 100),
@@ -58,9 +64,5 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       currentStrokeIndex: 0,
       completedStrokeIndices: [],
       progress: 0,
-      guideImageUrl: null,
     }),
-
-  setGuideImage: (url) => set({ guideImageUrl: url }),
-  setTotalStrokes: (n) => set({ totalStrokes: n }),
 }));

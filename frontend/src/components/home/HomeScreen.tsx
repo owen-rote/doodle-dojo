@@ -371,12 +371,24 @@ function StartDrawingSection() {
           mode: params.inputType,
         });
 
-        // Wait for backend to process the reference image and generate stroke guides
-        await fetch("/api/upload-reference", {
+        // Wait for backend stroke extraction and store the result
+        const uploadRes = await fetch("/api/upload-reference", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ image: data.image, mimeType: data.mimeType }),
         });
+        if (uploadRes.ok) {
+          const uploadData = await uploadRes.json() as {
+            strokes?: { stroke_id: number; point_count: number; stroke_len_px: number; points: number[][] }[];
+            image_width?: number;
+            image_height?: number;
+          };
+          setSession({
+            guideStrokes: uploadData.strokes ?? [],
+            guideImageWidth: uploadData.image_width ?? 0,
+            guideImageHeight: uploadData.image_height ?? 0,
+          });
+        }
 
         // Complete the progress bar and navigate
         setLoadingProgress(100);

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useEffect, useState, useCallback } from "react";
-import { Stage, Layer, Line, Image as KonvaImage } from "react-konva";
+import { Stage, Layer, Line, Circle, Image as KonvaImage } from "react-konva";
 import type Konva from "konva";
 import { useCanvasStore } from "@/stores/canvasStore";
 import { useSessionStore } from "@/stores/sessionStore";
@@ -135,8 +135,20 @@ export default function DrawingCanvas() {
     setStage,
   } = useCanvasStore();
 
-  const guideImageUrl = useSessionStore((s) => s.guideImageUrl);
+  const guideStrokes = useSessionStore((s) => s.guideStrokes);
+  const currentStrokeIndex = useSessionStore((s) => s.currentStrokeIndex);
+  const guideImageWidth = useSessionStore((s) => s.guideImageWidth);
+  const guideImageHeight = useSessionStore((s) => s.guideImageHeight);
   const fillImageEl = useImage(fillImageUrl);
+
+  // Current stroke's guide dots, scaled from image coords to canvas coords
+  const guideDots = (() => {
+    const stroke = guideStrokes[currentStrokeIndex];
+    if (!stroke || !guideImageWidth || !guideImageHeight || !size.width || !size.height) return [];
+    const scaleX = size.width / guideImageWidth;
+    const scaleY = size.height / guideImageHeight;
+    return stroke.points.map(([x, y]) => ({ x: x * scaleX, y: y * scaleY }));
+  })();
 
   // Track canvas container size
   useEffect(() => {
@@ -223,17 +235,7 @@ export default function DrawingCanvas() {
 
   return (
     <div ref={containerRef} className="relative h-full w-full">
-      {/* Stroke guide overlay */}
-      {guideImageUrl && (
-        <img
-          src={guideImageUrl}
-          alt=""
-          className="pointer-events-none absolute inset-0 z-10 h-full w-full object-contain"
-          draggable={false}
-        />
-      )}
-
-      {!hasContent && !guideImageUrl && size.width > 0 && (
+      {!hasContent && guideStrokes.length === 0 && size.width > 0 && (
         <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
           <span className="text-[18px] text-gray-400">Loading guide...</span>
         </div>
@@ -252,6 +254,22 @@ export default function DrawingCanvas() {
           onTouchEnd={handleMouseUp}
           style={{ cursor }}
         >
+          {/* Guide dots for the current stroke */}
+          {guideDots.length > 0 && (
+            <Layer listening={false}>
+              {guideDots.map((dot, i) => (
+                <Circle
+                  key={i}
+                  x={dot.x}
+                  y={dot.y}
+                  radius={5}
+                  fill="#a855f7"
+                  opacity={0.75}
+                />
+              ))}
+            </Layer>
+          )}
+
           {/* Single layer: fill image + strokes + eraser all in one
               so that destination-out (eraser) works on everything */}
           <Layer>

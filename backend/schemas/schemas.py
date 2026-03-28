@@ -1,10 +1,32 @@
 from pydantic import BaseModel, model_validator
 
 
-# ============== Send Chat ==========================================
+# ── Upload reference image ─────────────────────────────────────────────────────
+
+class IngestReferenceImageRequest(BaseModel):
+    reference_image_base64: str  # Data URL or raw base64
+
+
+class StrokeInfo(BaseModel):
+    stroke_id: int
+    point_count: int
+    stroke_len_px: int
+    points: list[list[int]]
+
+
+class IngestReferenceImageResponse(BaseModel):
+    stroke_count: int = 0
+    image_width: int = 0
+    image_height: int = 0
+    strokes: list[StrokeInfo] = []
+    message: str = ""
+
+
+# ── Chat ───────────────────────────────────────────────────────────────────────
+
 class SendChatRequest(BaseModel):
     drawing_json: dict = dict()
-    drawing_url: str = ""  # URL might be base64?
+    drawing_url: str = ""
     reference_json: dict = dict()
     reference_url: str = ""
     message: str = ""
@@ -14,27 +36,31 @@ class SendChatResponse(BaseModel):
     message: str
 
 
-# ============== Ingest Reference Image ================================
-class IngestReferenceImageRequest(BaseModel):
-    reference_image_base64: str  # Data URL or base64
+# ── Generate song ──────────────────────────────────────────────────────────────
+
+class GenerateSongRequest(BaseModel):
+    reference_json: dict = dict()
+    reference_url: str = ""
 
 
-class IngestReferenceImageResponse(BaseModel):
-    # strokes: list[str] = list()  # List of base64 data URLs (PNG/JPEG)
-    count: int = 0
+class GenerateSongResponse(BaseModel):
+    song_data: str = ""
     message: str = ""
 
 
-# ============== Get Strokes ================================
-class GetStrokeRequest(BaseModel):
-    """React frontend sends reference image + optional current drawing state"""
+# ── Generate reference image ───────────────────────────────────────────────────
 
-    indexes: list[int] = []  # List of stroke indexes to fetch (e.g. [0] for next stroke, [0,1] for next 2 strokes, etc.)
+class GenerateImageRequest(BaseModel):
+    prompt: str | None = None
+    image_base64: str | None = None
+
+    @model_validator(mode="after")
+    def check_input(self):
+        if not self.prompt and not self.image_base64:
+            raise ValueError("At least one of prompt or image_base64 must be provided.")
+        return self
 
 
-class GetStrokeResponse(BaseModel):
-    stroke_variations: dict[int, str] = dict()  # Dictionary mapping stroke indexes to base64 data URLs (PNG/JPEG)
+class GenerateImageResponse(BaseModel):
+    generated_image_url: str = ""
     message: str = ""
-
-
-# =====================================================================
