@@ -14,23 +14,9 @@ This repo contains:
 
 ## Demo
 
-Paste your demo links here.
-
-### Main Demo
-
-`Add link`
-
-### Animation Demo
-
 ![Pikachu Animation](readme_resources/pikachu_video.gif)
 
-### Live Coach Demo
 
-`Add link`
-
-### Lyria Demo
-
-`Add link`
 
 ## What It Does
 
