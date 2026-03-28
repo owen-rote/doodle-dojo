@@ -8,17 +8,22 @@ const MAX_STROKES_TO_FETCH = 30;
 
 async function fetchAllStrokes(): Promise<string[]> {
   const indexes = Array.from({ length: MAX_STROKES_TO_FETCH }, (_, i) => i);
-  const res = await fetch("http://0.0.0.0:8000/api/get_strokes", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ indexes }),
-  });
-  if (!res.ok) return [];
-  const data = await res.json() as { stroke_variations?: Record<string, string> };
-  const variations = data.stroke_variations ?? {};
-  return Object.entries(variations)
-    .sort(([a], [b]) => Number(a) - Number(b))
-    .map(([, url]) => url);
+  try {
+    const res = await fetch("/api/get-strokes", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ indexes }),
+    });
+    if (!res.ok) return [];
+
+    const data = (await res.json()) as { stroke_variations?: Record<string, string> };
+    const variations = data.stroke_variations ?? {};
+    return Object.entries(variations)
+      .sort(([a], [b]) => Number(a) - Number(b))
+      .map(([, url]) => url);
+  } catch {
+    return [];
+  }
 }
 
 export function useStrokeGuide() {
