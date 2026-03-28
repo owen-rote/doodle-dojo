@@ -3,8 +3,6 @@ from fastapi import APIRouter
 from schemas.schemas import IngestReferenceImageRequest, IngestReferenceImageResponse
 from schemas.schemas import GetStrokeRequest, GetStrokeResponse
 from schemas.schemas import SendChatRequest, SendChatResponse
-from schemas.schemas import GenerateSongRequest, GenerateSongResponse
-from schemas.schemas import GenerateImageRequest, GenerateImageResponse
 import services.gemini_service as gemini_service
 import services.image_processing_service as image_processing_service
 
@@ -33,7 +31,7 @@ async def upload_reference_image(body: IngestReferenceImageRequest) -> IngestRef
     sketch_img = await gemini_service.ingest_reference_image(body)
     _stroke_images_memory = image_processing_service.split_sketch_by_color(sketch_img)
     return IngestReferenceImageResponse(
-        #strokes=_stroke_images_memory,
+        # strokes=_stroke_images_memory,
         count=len(_stroke_images_memory),
         message="Success",
     )
@@ -42,7 +40,7 @@ async def upload_reference_image(body: IngestReferenceImageRequest) -> IngestRef
 @router.post(
     "/get_strokes",
     response_model=GetStrokeResponse,
-    summary="Get stroke variations",
+    summary="Get strokes",
 )
 async def get_strokes(body: GetStrokeRequest) -> GetStrokeResponse:
     """Get stored strokes from backend based on provided stroke indexes."""
@@ -68,26 +66,4 @@ async def get_strokes(body: GetStrokeRequest) -> GetStrokeResponse:
 async def send_chat(body: SendChatRequest) -> SendChatResponse:
     """Sending chat message in chat window, along with current drawing AND reference image as context."""
     response = await gemini_service.send_chat(body)
-    return response
-
-
-@router.post(
-    "/generate_song",
-    response_model=GenerateSongResponse,
-    summary="Generate song based on reference image",
-)
-async def generate_song(body: GenerateSongRequest) -> GenerateSongResponse:
-    """Generate a lofi background music track based on reference image to listen to while drawing."""
-    response = await gemini_service.generate_song(body)
-    return response
-
-
-@router.post(
-    "/generate_image",
-    response_model=GenerateImageResponse,
-    summary="Generate reference image for drawing prompt",
-)
-async def generate_image(body: GenerateImageRequest) -> GenerateImageResponse:
-    """Generate a reference image for the given drawing prompt."""
-    response = await gemini_service.generate_image(body)
     return response
