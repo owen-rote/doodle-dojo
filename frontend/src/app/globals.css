@@ -117,3 +117,97 @@ body {
 .animate-\[fadeSlideUp_0\.4s_ease-out\] {
   animation: fadeSlideUp 0.4s ease-out both;
 }
+
+/* ─── Spotlight / light beam for How It Works ─── */
+
+@keyframes spotlightSweep {
+  0% {
+    transform: translateX(-80%) rotate(-12deg);
+    opacity: 0.6;
+  }
+  50% {
+    transform: translateX(80%) rotate(12deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(-80%) rotate(-12deg);
+    opacity: 0.6;
+  }
+}
+
+@keyframes spotlightSweepReverse {
+  0% {
+    transform: translateX(70%) rotate(8deg);
+    opacity: 0.5;
+  }
+  50% {
+    transform: translateX(-70%) rotate(-8deg);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateX(70%) rotate(8deg);
+    opacity: 0.5;
+  }
+}
+
+@keyframes spotlightGlow {
+  0% {
+    transform: translate(-80%, -50%);
+    opacity: 0.4;
+  }
+  50% {
+    transform: translate(40%, -50%);
+    opacity: 0.7;
+  }
+  100% {
+    transform: translate(-80%, -50%);
+    opacity: 0.4;
+  }
+}
+
+.spotlight-beam {
+  animation: spotlightSweep 8s ease-in-out infinite;
+}
+
+.spotlight-beam-reverse {
+  animation: spotlightSweepReverse 12s ease-in-out infinite;
+}
+
+.spotlight-glow {
+  animation: spotlightGlow 8s ease-in-out infinite;
+}
+
+/* ─── Glossy sweep / shine effect for CTA buttons ─── */
+
+@keyframes shineSweep {
+  0% {
+    transform: translateX(-100%) skewX(-15deg);
+  }
+  100% {
+    transform: translateX(250%) skewX(-15deg);
+  }
+}
+
+.btn-shine {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-shine::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 40%;
+  height: 100%;
+  background: linear-gradient(
+    105deg,
+    transparent 20%,
+    rgba(255, 255, 255, 0.25) 50%,
+    transparent 80%
+  );
+  transform: translateX(-100%) skewX(-15deg);
+  animation: shineSweep 3s ease-in-out infinite;
+  animation-delay: 1s;
+  pointer-events: none;
+}

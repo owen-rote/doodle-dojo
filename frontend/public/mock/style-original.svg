@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300" fill="none">
+  <!-- Background -->
+  <rect width="300" height="300" rx="16" fill="#1a1a2e"/>
+  <!-- Simplified cat silhouette - "original photo" style with solid fills -->
+  <!-- Body -->
+  <ellipse cx="150" cy="195" rx="70" ry="60" fill="#F4A261"/>
+  <!-- Head -->
+  <circle cx="150" cy="120" r="50" fill="#F4A261"/>
+  <!-- Left ear -->
+  <polygon points="110,80 95,40 130,70" fill="#F4A261"/>
+  <polygon points="113,78 102,50 127,72" fill="#E76F51"/>
+  <!-- Right ear -->
+  <polygon points="190,80 205,40 170,70" fill="#F4A261"/>
+  <polygon points="187,78 198,50 173,72" fill="#E76F51"/>
+  <!-- Eyes -->
+  <ellipse cx="130" cy="115" rx="10" ry="12" fill="#264653"/>
+  <ellipse cx="170" cy="115" rx="10" ry="12" fill="#264653"/>
+  <ellipse cx="132" cy="112" rx="4" ry="5" fill="white"/>
+  <ellipse cx="172" cy="112" rx="4" ry="5" fill="white"/>
+  <!-- Nose -->
+  <ellipse cx="150" cy="132" rx="6" ry="4" fill="#E76F51"/>
+  <!-- Mouth -->
+  <path d="M144 138 Q150 146 156 138" stroke="#264653" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <!-- Whiskers -->
+  <line x1="100" y1="128" x2="130" y2="130" stroke="#264653" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="100" y1="138" x2="130" y2="136" stroke="#264653" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="200" y1="128" x2="170" y2="130" stroke="#264653" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="200" y1="138" x2="170" y2="136" stroke="#264653" stroke-width="1.5" stroke-linecap="round"/>
+  <!-- Tail -->
+  <path d="M220 195 Q240 160 230 130" stroke="#F4A261" stroke-width="12" fill="none" stroke-linecap="round"/>
+  <!-- Ground shadow -->
+  <ellipse cx="150" cy="258" rx="80" ry="8" fill="rgba(0,0,0,0.2)"/>
+</svg>

@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { useSessionStore } from "@/stores/sessionStore";
 
 // ─── Intersection Observer hook for scroll-triggered fade-up ───
 function useFadeUp() {
@@ -39,13 +40,12 @@ function Navbar() {
 
         <div className="hidden items-center gap-8 text-sm text-gray-400 lg:flex">
           <a href="#how-it-works" className="transition hover:text-white">How it Works</a>
-          <a href="#styles" className="transition hover:text-white">Styles</a>
           <a href="#about" className="transition hover:text-white">About</a>
         </div>
 
         <a
           href="#start"
-          className="rounded-full bg-gradient-to-r from-purple-600 to-violet-500 px-5 py-2 text-sm font-medium text-white shadow-lg shadow-purple-500/25 transition hover:shadow-purple-500/40"
+          className="btn-shine rounded-full bg-gradient-to-r from-purple-600 to-violet-500 px-5 py-2 text-sm font-medium text-white shadow-lg shadow-purple-500/25 transition hover:shadow-purple-500/40"
         >
           Start Drawing
         </a>
@@ -84,9 +84,9 @@ function HeroSection() {
         <div className="hero-fadein hero-delay-3 mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
           <a
             href="#start"
-            className="rounded-full bg-gradient-to-r from-purple-600 to-pink-500 px-8 py-3.5 text-base font-semibold text-white shadow-lg shadow-purple-600/30 transition hover:shadow-purple-600/50 hover:brightness-110"
+            className="btn-shine rounded-full bg-gradient-to-r from-purple-600 to-pink-500 px-8 py-3.5 text-base font-semibold text-white shadow-lg shadow-purple-600/30 transition hover:shadow-purple-600/50 hover:brightness-110"
           >
-            Start Drawing Free
+            Start Drawing
           </a>
           <a
             href="#how-it-works"
@@ -246,11 +246,32 @@ function LoadingScreen({ progress, messageIndex }: { progress: number; messageIn
   );
 }
 
-// ─── Start Drawing Section ───
+// ─── Start Drawing Section (multi-step) ───
+type SketchStyle = "bw" | "colored";
+
+function fileToBase64(file: File): Promise<{ base64: string; mimeType: string }> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      // Strip "data:<mime>;base64," prefix
+      const base64 = dataUrl.split(",")[1];
+      resolve({ base64, mimeType: file.type || "image/png" });
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 function StartDrawingSection() {
   const ref = useFadeUp();
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const setSession = useSessionStore((s) => s.setSession);
+
+  // Step: 1 = style selection, 2 = upload/text input
+  const [step, setStep] = useState<1 | 2>(1);
+  const [selectedStyle, setSelectedStyle] = useState<SketchStyle | null>(null);
   const [activeTab, setActiveTab] = useState<"image" | "text">("image");
   const [textPrompt, setTextPrompt] = useState("");
   const [fileName, setFileName] = useState("");
@@ -258,245 +279,394 @@ function StartDrawingSection() {
   const [loading, setLoading] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [loadingMsgIndex, setLoadingMsgIndex] = useState(0);
-  const navigateTo = useRef("");
+  const [error, setError] = useState<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
-  function startLoading(destination: string) {
-    navigateTo.current = destination;
-    setLoading(true);
-    setLoadingProgress(0);
-    setLoadingMsgIndex(0);
+  function handleStyleSelect(style: SketchStyle) {
+    setSelectedStyle(style);
   }
 
+  function handleContinueToInput() {
+    if (!selectedStyle) return;
+    setStep(2);
+  }
+
+  function handleBackToStyles() {
+    setStep(1);
+  }
+
+  // Indeterminate progress animation while waiting for API
   useEffect(() => {
     if (!loading) return;
 
-    // Progress increment every 100ms for 8 seconds (80 ticks)
     const progressTimer = setInterval(() => {
       setLoadingProgress((p) => {
-        if (p >= 100) return 100;
-        // Ease out: faster at start, slower toward end
-        const remaining = 100 - p;
-        return p + remaining * 0.04;
+        if (p >= 90) return 90; // Cap at 90% until response arrives
+        const remaining = 90 - p;
+        return p + remaining * 0.03;
       });
     }, 100);
 
-    // Cycle messages every 1 second
     const msgTimer = setInterval(() => {
       setLoadingMsgIndex((i) => (i + 1) % loadingMessages.length);
     }, 1000);
 
-    // Navigate after 8 seconds
-    const navTimer = setTimeout(() => {
-      setLoadingProgress(100);
-      setTimeout(() => {
-        router.push(navigateTo.current);
-      }, 300);
-    }, 8000);
-
     return () => {
       clearInterval(progressTimer);
       clearInterval(msgTimer);
-      clearTimeout(navTimer);
     };
-  }, [loading, router]);
+  }, [loading]);
 
-  function handleFileSelect(file: File | undefined) {
+  const generateStyleImage = useCallback(
+    async (params: {
+      inputType: "image" | "text";
+      textPrompt?: string;
+      imageBase64?: string;
+      imageMimeType?: string;
+    }) => {
+      setError(null);
+      setLoading(true);
+      setLoadingProgress(0);
+      setLoadingMsgIndex(0);
+
+      abortRef.current = new AbortController();
+
+      try {
+        const res = await fetch("/api/generate-style", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            style: selectedStyle,
+            inputType: params.inputType,
+            textPrompt: params.textPrompt,
+            imageBase64: params.imageBase64,
+            imageMimeType: params.imageMimeType,
+          }),
+          signal: abortRef.current.signal,
+        });
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || "Failed to generate style image");
+        }
+
+        const data = await res.json();
+        const referenceImageUrl = `data:${data.mimeType};base64,${data.image}`;
+
+        // Store in session store
+        setSession({
+          referenceImageUrl,
+          mode: params.inputType,
+        });
+
+        // TODO: Send reference image to backend
+        // await fetch("/api/backend/upload-reference", {
+        //   method: "POST",
+        //   headers: { "Content-Type": "application/json" },
+        //   body: JSON.stringify({ image: data.image, mimeType: data.mimeType }),
+        // });
+
+        // Complete the progress bar and navigate
+        setLoadingProgress(100);
+        await new Promise((r) => setTimeout(r, 400));
+        router.push(`/session?mode=${params.inputType}&style=${selectedStyle}`);
+      } catch (err: unknown) {
+        if (err instanceof Error && err.name === "AbortError") return;
+        setError(err instanceof Error ? err.message : "Something went wrong");
+        setLoading(false);
+        setLoadingProgress(0);
+      }
+    },
+    [selectedStyle, setSession, router]
+  );
+
+  async function handleFileSelect(file: File | undefined) {
     if (!file) return;
     setFileName(file.name);
-    startLoading("/session?mode=image");
+    const { base64, mimeType } = await fileToBase64(file);
+    generateStyleImage({
+      inputType: "image",
+      imageBase64: base64,
+      imageMimeType: mimeType,
+    });
   }
 
   function handleTextSubmit() {
     if (!textPrompt.trim()) return;
-    startLoading(`/session?mode=text&prompt=${encodeURIComponent(textPrompt.trim())}`);
+    generateStyleImage({
+      inputType: "text",
+      textPrompt: textPrompt.trim(),
+    });
   }
 
   return (
     <>
       {loading && <LoadingScreen progress={loadingProgress} messageIndex={loadingMsgIndex} />}
       <section id="start" className="px-6 py-24">
-      <div
-        ref={ref}
-        className="mx-auto max-w-2xl opacity-0 translate-y-8 transition-all duration-700 ease-out"
-      >
-        <h2 className="mb-3 text-center text-3xl font-bold text-white lg:text-4xl">
-          Start your drawing
-        </h2>
-        <p className="mb-10 text-center text-gray-400">
-          Upload a reference image or describe what you&apos;d like to draw
-        </p>
-
-        {/* Tab switcher */}
-        <div className="mx-auto mb-8 flex w-fit rounded-full border border-white/10 bg-white/5 p-1">
-          <button
-            onClick={() => setActiveTab("image")}
-            className={`rounded-full px-6 py-2 text-sm font-medium transition-all ${
-              activeTab === "image"
-                ? "bg-purple-600 text-white shadow-lg shadow-purple-600/30"
-                : "text-gray-400 hover:text-white"
-            }`}
-          >
-            Upload Image
-          </button>
-          <button
-            onClick={() => setActiveTab("text")}
-            className={`rounded-full px-6 py-2 text-sm font-medium transition-all ${
-              activeTab === "text"
-                ? "bg-purple-600 text-white shadow-lg shadow-purple-600/30"
-                : "text-gray-400 hover:text-white"
-            }`}
-          >
-            Describe It
-          </button>
-        </div>
-
-        {/* Content card */}
-        <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-8 backdrop-blur-md">
-          {/* Subtle glow */}
-          <div className="pointer-events-none absolute inset-0 -z-10">
-            <div className="absolute left-1/2 top-1/2 h-[200px] w-[200px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-purple-600/10 blur-[60px]" />
+        <div
+          ref={ref}
+          className="mx-auto max-w-4xl opacity-0 translate-y-8 transition-all duration-700 ease-out"
+        >
+          {/* ─── Step indicator ─── */}
+          <div className="mx-auto mb-10 flex w-fit items-center gap-3 text-sm">
+            <span className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${step === 1 ? "bg-purple-600 text-white" : "bg-purple-600/20 text-purple-400"}`}>1</span>
+            <span className={`font-medium ${step === 1 ? "text-white" : "text-gray-500"}`}>Choose Style</span>
+            <div className="h-px w-8 bg-white/15" />
+            <span className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${step === 2 ? "bg-purple-600 text-white" : "bg-white/10 text-gray-500"}`}>2</span>
+            <span className={`font-medium ${step === 2 ? "text-white" : "text-gray-500"}`}>Add Reference</span>
           </div>
 
-          {activeTab === "image" ? (
-            /* ── Image Upload ── */
+          {step === 1 ? (
+            /* ═══════════════ STEP 1: Style Selection ═══════════════ */
             <div>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => handleFileSelect(e.target.files?.[0])}
-              />
-              <div
-                onClick={() => fileInputRef.current?.click()}
-                onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-                onDragLeave={() => setDragOver(false)}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  setDragOver(false);
-                  handleFileSelect(e.dataTransfer.files?.[0]);
-                }}
-                className={`flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed py-16 transition-all ${
-                  dragOver
-                    ? "border-purple-400 bg-purple-500/10"
-                    : "border-white/15 hover:border-purple-500/40 hover:bg-white/5"
-                }`}
-              >
-                {/* Upload icon */}
-                <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-purple-500/15">
-                  <svg className="h-7 w-7 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
-                  </svg>
+              <h2 className="mb-3 text-center text-3xl font-bold text-white lg:text-4xl">
+                Choose your sketch style
+              </h2>
+              <p className="mb-10 text-center text-gray-400">
+                See how your image will be transformed, then pick a style
+              </p>
+
+              {/* Three example images side-by-side */}
+              <div className="grid grid-cols-3 gap-4 lg:gap-6">
+                {/* Original */}
+                <div className="flex flex-col items-center">
+                  <div className="relative w-full overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-3 backdrop-blur-md">
+                    <img
+                      src="/mock/style-original.svg"
+                      alt="Original image"
+                      className="aspect-square w-full rounded-xl object-cover"
+                    />
+                  </div>
+                  <p className="mt-3 text-sm font-medium text-gray-400">Original</p>
                 </div>
-                <p className="text-base font-medium text-white">
-                  {fileName || "Drop your image here"}
-                </p>
-                <p className="mt-1 text-sm text-gray-500">
-                  or click to browse &middot; PNG, JPG, WEBP
-                </p>
+
+                {/* Style 1: Black & White Sketch */}
+                <div className="flex flex-col items-center">
+                  <button
+                    onClick={() => handleStyleSelect("bw")}
+                    className={`relative w-full overflow-hidden rounded-2xl border-2 p-3 backdrop-blur-md transition-all duration-300 ${
+                      selectedStyle === "bw"
+                        ? "border-purple-500 bg-purple-500/10 shadow-[0_0_30px_rgba(168,85,247,0.2)]"
+                        : "border-white/10 bg-white/5 hover:border-purple-500/40"
+                    }`}
+                  >
+                    {selectedStyle === "bw" && (
+                      <div className="absolute right-3 top-3 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-purple-600">
+                        <svg className="h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                        </svg>
+                      </div>
+                    )}
+                    <img
+                      src="/mock/style-bw-sketch.svg"
+                      alt="Black & White Sketch"
+                      className="aspect-square w-full rounded-xl object-cover"
+                    />
+                  </button>
+                  <p className={`mt-3 text-sm font-semibold ${selectedStyle === "bw" ? "text-purple-400" : "text-white"}`}>
+                    Black &amp; White Sketch
+                  </p>
+                </div>
+
+                {/* Style 2: Colored Sketch */}
+                <div className="flex flex-col items-center">
+                  <button
+                    onClick={() => handleStyleSelect("colored")}
+                    className={`relative w-full overflow-hidden rounded-2xl border-2 p-3 backdrop-blur-md transition-all duration-300 ${
+                      selectedStyle === "colored"
+                        ? "border-purple-500 bg-purple-500/10 shadow-[0_0_30px_rgba(168,85,247,0.2)]"
+                        : "border-white/10 bg-white/5 hover:border-purple-500/40"
+                    }`}
+                  >
+                    {selectedStyle === "colored" && (
+                      <div className="absolute right-3 top-3 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-purple-600">
+                        <svg className="h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                        </svg>
+                      </div>
+                    )}
+                    <img
+                      src="/mock/style-colored-sketch.svg"
+                      alt="Colored Sketch"
+                      className="aspect-square w-full rounded-xl object-cover"
+                    />
+                  </button>
+                  <p className={`mt-3 text-sm font-semibold ${selectedStyle === "colored" ? "text-purple-400" : "text-white"}`}>
+                    Colored Sketch
+                  </p>
+                </div>
+              </div>
+
+              {/* Continue button */}
+              <div className="mt-10 flex justify-center">
+                <button
+                  onClick={handleContinueToInput}
+                  disabled={!selectedStyle}
+                  className="rounded-full bg-gradient-to-r from-purple-600 to-pink-500 px-10 py-3.5 text-base font-semibold text-white shadow-lg shadow-purple-600/30 transition hover:shadow-purple-600/50 hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Continue
+                </button>
               </div>
             </div>
           ) : (
-            /* ── Text Prompt ── */
-            <div>
-              <div className="mb-4 flex items-start gap-3">
-                <div className="mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-purple-500/15">
-                  <svg className="h-5 w-5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Z" />
-                  </svg>
-                </div>
-                <div>
-                  <p className="text-base font-medium text-white">Describe your drawing</p>
-                  <p className="text-sm text-gray-500">Be specific — the more detail, the better the guide</p>
-                </div>
+            /* ═══════════════ STEP 2: Upload / Text Input ═══════════════ */
+            <div className="mx-auto max-w-2xl">
+              {/* Back button */}
+              <button
+                onClick={handleBackToStyles}
+                className="mb-6 flex items-center gap-2 text-sm text-gray-400 transition hover:text-white"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+                </svg>
+                Back to style selection
+              </button>
+
+              <h2 className="mb-3 text-center text-3xl font-bold text-white lg:text-4xl">
+                Add your reference
+              </h2>
+              <p className="mb-10 text-center text-gray-400">
+                Upload an image or describe what you&apos;d like to draw
+                <span className="ml-2 inline-flex items-center gap-1 rounded-full border border-purple-500/30 bg-purple-500/10 px-2.5 py-0.5 text-xs text-purple-300">
+                  {selectedStyle === "bw" ? "B&W Sketch" : "Colored Sketch"}
+                </span>
+              </p>
+
+              {/* Tab switcher */}
+              <div className="mx-auto mb-8 flex w-fit rounded-full border border-white/10 bg-white/5 p-1">
+                <button
+                  onClick={() => setActiveTab("image")}
+                  className={`rounded-full px-6 py-2 text-sm font-medium transition-all ${
+                    activeTab === "image"
+                      ? "bg-purple-600 text-white shadow-lg shadow-purple-600/30"
+                      : "text-gray-400 hover:text-white"
+                  }`}
+                >
+                  Upload Image
+                </button>
+                <button
+                  onClick={() => setActiveTab("text")}
+                  className={`rounded-full px-6 py-2 text-sm font-medium transition-all ${
+                    activeTab === "text"
+                      ? "bg-purple-600 text-white shadow-lg shadow-purple-600/30"
+                      : "text-gray-400 hover:text-white"
+                  }`}
+                >
+                  Describe It
+                </button>
               </div>
 
-              <textarea
-                value={textPrompt}
-                onChange={(e) => setTextPrompt(e.target.value)}
-                placeholder="e.g. A cat sitting on a windowsill looking at the rain..."
-                rows={4}
-                className="w-full resize-none rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-base text-white placeholder:text-gray-600 focus:border-purple-500/50 focus:outline-none focus:ring-1 focus:ring-purple-500/30"
-              />
+              {/* Content card */}
+              <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-8 backdrop-blur-md">
+                <div className="pointer-events-none absolute inset-0 -z-10">
+                  <div className="absolute left-1/2 top-1/2 h-[200px] w-[200px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-purple-600/10 blur-[60px]" />
+                </div>
 
-              <button
-                onClick={handleTextSubmit}
-                disabled={!textPrompt.trim()}
-                className="mt-4 w-full rounded-xl bg-gradient-to-r from-purple-600 to-pink-500 py-3 text-base font-semibold text-white shadow-lg shadow-purple-600/30 transition hover:shadow-purple-600/50 hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                Generate Drawing Guide
-              </button>
+                {activeTab === "image" ? (
+                  <div>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => handleFileSelect(e.target.files?.[0])}
+                    />
+                    <div
+                      onClick={() => fileInputRef.current?.click()}
+                      onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                      onDragLeave={() => setDragOver(false)}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        setDragOver(false);
+                        handleFileSelect(e.dataTransfer.files?.[0]);
+                      }}
+                      className={`flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed py-16 transition-all ${
+                        dragOver
+                          ? "border-purple-400 bg-purple-500/10"
+                          : "border-white/15 hover:border-purple-500/40 hover:bg-white/5"
+                      }`}
+                    >
+                      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-purple-500/15">
+                        <svg className="h-7 w-7 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
+                        </svg>
+                      </div>
+                      <p className="text-base font-medium text-white">
+                        {fileName || "Drop your image here"}
+                      </p>
+                      <p className="mt-1 text-sm text-gray-500">
+                        or click to browse &middot; PNG, JPG, WEBP
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <div className="mb-4 flex items-start gap-3">
+                      <div className="mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-purple-500/15">
+                        <svg className="h-5 w-5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-base font-medium text-white">Describe your drawing</p>
+                        <p className="text-sm text-gray-500">Be specific — the more detail, the better the guide</p>
+                      </div>
+                    </div>
+
+                    <textarea
+                      value={textPrompt}
+                      onChange={(e) => setTextPrompt(e.target.value)}
+                      placeholder="e.g. A cat sitting on a windowsill looking at the rain..."
+                      rows={4}
+                      className="w-full resize-none rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-base text-white placeholder:text-gray-600 focus:border-purple-500/50 focus:outline-none focus:ring-1 focus:ring-purple-500/30"
+                    />
+
+                    <button
+                      onClick={handleTextSubmit}
+                      disabled={!textPrompt.trim() || loading}
+                      className="mt-4 w-full rounded-xl bg-gradient-to-r from-purple-600 to-pink-500 py-3 text-base font-semibold text-white shadow-lg shadow-purple-600/30 transition hover:shadow-purple-600/50 hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      {loading ? "Generating…" : "Generate Drawing Guide"}
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {error && (
+                <div className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-center text-sm text-red-400">
+                  {error}
+                </div>
+              )}
+
+              <p className="mt-4 text-center text-xs text-gray-600">
+                Your image stays on your device &middot; Nothing is stored
+              </p>
             </div>
           )}
         </div>
-
-        {/* Helper text */}
-        <p className="mt-4 text-center text-xs text-gray-600">
-          Your image stays on your device &middot; Nothing is stored
-        </p>
-      </div>
-    </section>
+      </section>
     </>
   );
 }
 
-// ─── Style Showcase ───
-const styles = [
-  { name: "Anime", gradient: "from-pink-500 to-purple-600" },
-  { name: "Ghibli", gradient: "from-emerald-400 to-teal-600" },
-  { name: "Cartoon", gradient: "from-amber-400 to-orange-500" },
-  { name: "Bold Outline", gradient: "from-blue-400 to-indigo-600" },
-];
-
-function StyleShowcase() {
-  const ref = useFadeUp();
-  return (
-    <section id="styles" className="px-6 py-24">
-      <div
-        ref={ref}
-        className="mx-auto max-w-5xl opacity-0 translate-y-8 transition-all duration-700 ease-out"
-      >
-        <h2 className="mb-12 text-center text-3xl font-bold text-white lg:text-4xl">
-          Pick your art style
-        </h2>
-
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4 lg:gap-6">
-          {styles.map((s) => (
-            <div
-              key={s.name}
-              className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:border-purple-500/40 hover:shadow-[0_0_30px_rgba(124,58,237,0.15)]"
-            >
-              <div className={`mb-4 aspect-square w-full rounded-xl bg-gradient-to-br ${s.gradient} opacity-60 transition group-hover:opacity-80`}>
-                <div className="flex h-full items-center justify-center">
-                  <div className="h-3/5 w-3/5 animate-[pulse_3s_ease-in-out_infinite] rounded-lg bg-white/10" />
-                </div>
-              </div>
-              <p className="text-center text-sm font-semibold text-white">{s.name}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
 
 // ─── How It Works ───
 const steps = [
+  {
+    title: "Pick a style",
+    desc: "Choose Black & White or Colored Sketch.",
+    icon: (
+      <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M4.098 19.902a3.75 3.75 0 0 0 5.304 0l6.401-6.402M6.75 21A3.75 3.75 0 0 1 3 17.25V4.125C3 3.504 3.504 3 4.125 3h5.25c.621 0 1.125.504 1.125 1.125v4.072M6.75 21a3.75 3.75 0 0 0 3.75-3.75V8.197M6.75 21h13.125c.621 0 1.125-.504 1.125-1.125v-5.25c0-.621-.504-1.125-1.125-1.125h-4.072" />
+      </svg>
+    ),
+  },
   {
     title: "Upload or describe",
     desc: "Drop an image or type what you want to draw.",
     icon: (
       <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
-      </svg>
-    ),
-  },
-  {
-    title: "Pick a style",
-    desc: "Choose Anime, Ghibli, Cartoon, or Bold Outline.",
-    icon: (
-      <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M4.098 19.902a3.75 3.75 0 0 0 5.304 0l6.401-6.402M6.75 21A3.75 3.75 0 0 1 3 17.25V4.125C3 3.504 3.504 3 4.125 3h5.25c.621 0 1.125.504 1.125 1.125v4.072M6.75 21a3.75 3.75 0 0 0 3.75-3.75V8.197M6.75 21h13.125c.621 0 1.125-.504 1.125-1.125v-5.25c0-.621-.504-1.125-1.125-1.125h-4.072" />
       </svg>
     ),
   },
@@ -514,10 +684,35 @@ const steps = [
 function HowItWorks() {
   const ref = useFadeUp();
   return (
-    <section id="how-it-works" className="px-6 py-24">
+    <section id="how-it-works" className="relative px-6 py-24 overflow-hidden">
+      {/* Animated spotlight beams */}
+      <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+        {/* Primary spotlight cone */}
+        <div
+          className="spotlight-beam absolute h-[600px] w-[400px]"
+          style={{
+            top: "-100px",
+            left: "50%",
+            background: "conic-gradient(from 180deg at 50% 0%, transparent 30%, rgba(147,51,234,0.35) 47%, rgba(139,92,246,0.5) 50%, rgba(147,51,234,0.35) 53%, transparent 70%)",
+            filter: "blur(40px)",
+          }}
+        />
+        {/* Secondary pink beam */}
+        <div
+          className="spotlight-beam-reverse absolute h-[500px] w-[350px]"
+          style={{
+            top: "-80px",
+            left: "50%",
+            background: "conic-gradient(from 180deg at 50% 0%, transparent 35%, rgba(219,39,119,0.25) 48%, rgba(236,72,153,0.4) 50%, rgba(219,39,119,0.25) 52%, transparent 65%)",
+            filter: "blur(50px)",
+          }}
+        />
+        {/* Ambient glow that follows the beam */}
+        <div className="spotlight-glow absolute top-1/3 left-1/2 h-[400px] w-[400px] rounded-full bg-purple-500/25 blur-[100px]" />
+      </div>
       <div
         ref={ref}
-        className="mx-auto max-w-5xl opacity-0 translate-y-8 transition-all duration-700 ease-out"
+        className="relative z-10 mx-auto max-w-5xl opacity-0 translate-y-8 transition-all duration-700 ease-out"
       >
         <h2 className="mb-12 text-center text-3xl font-bold text-white lg:text-4xl">
           How it works
@@ -527,9 +722,9 @@ function HowItWorks() {
           {steps.map((step, i) => (
             <div
               key={step.title}
-              className="rounded-2xl border border-white/10 bg-white/5 p-8 backdrop-blur-md"
+              className="group rounded-2xl border border-white/10 bg-white/5 p-8 backdrop-blur-md transition-all duration-300 hover:border-purple-500/40 hover:shadow-[0_0_30px_-5px_rgba(168,85,247,0.35)] hover:-translate-y-1"
             >
-              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-purple-500/15 text-purple-400">
+              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-purple-500/15 text-purple-400 transition-all duration-300 group-hover:bg-purple-500/25 group-hover:shadow-[0_0_15px_-3px_rgba(168,85,247,0.5)]">
                 {step.icon}
               </div>
               <div className="mb-1 text-xs font-semibold uppercase tracking-wider text-purple-400">
@@ -563,9 +758,9 @@ function AboutSection() {
         </p>
         <a
           href="#start"
-          className="mt-8 inline-block rounded-full bg-gradient-to-r from-purple-600 to-pink-500 px-8 py-3.5 text-base font-semibold text-white shadow-lg shadow-purple-600/30 transition hover:shadow-purple-600/50 hover:brightness-110"
+          className="btn-shine mt-8 inline-block rounded-full bg-gradient-to-r from-purple-600 to-pink-500 px-8 py-3.5 text-base font-semibold text-white shadow-lg shadow-purple-600/30 transition hover:shadow-purple-600/50 hover:brightness-110"
         >
-          Start Drawing Free
+          Start Drawing
         </a>
       </div>
     </section>
@@ -585,7 +780,6 @@ function Footer() {
         </div>
         <div className="flex gap-6 text-sm text-gray-500">
           <a href="#how-it-works" className="transition hover:text-gray-300">How it Works</a>
-          <a href="#styles" className="transition hover:text-gray-300">Styles</a>
           <a href="#about" className="transition hover:text-gray-300">About</a>
         </div>
       </div>
@@ -600,7 +794,6 @@ export default function HomeScreen() {
       <Navbar />
       <HeroSection />
       <StartDrawingSection />
-      <StyleShowcase />
       <HowItWorks />
       <AboutSection />
       <Footer />

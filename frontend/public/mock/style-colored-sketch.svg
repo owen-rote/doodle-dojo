@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300" fill="none">
+  <!-- Background -->
+  <rect width="300" height="300" rx="16" fill="#1a1a2e"/>
+  <!-- Simplified cat - colored sketch style with visible strokes and soft fills -->
+  <!-- Body - soft watercolor-like fill with outline -->
+  <ellipse cx="150" cy="195" rx="70" ry="60" fill="#F4A261" opacity="0.3"/>
+  <ellipse cx="150" cy="195" rx="70" ry="60" stroke="#F4A261" stroke-width="2.5" fill="none"/>
+  <!-- Sketch strokes on body -->
+  <path d="M105 185 Q120 178 135 182" stroke="#E9C46A" stroke-width="1" opacity="0.5" fill="none"/>
+  <path d="M160 180 Q175 176 195 183" stroke="#E9C46A" stroke-width="1" opacity="0.5" fill="none"/>
+  <!-- Head - soft fill with outline -->
+  <circle cx="150" cy="120" r="50" fill="#F4A261" opacity="0.3"/>
+  <circle cx="150" cy="120" r="50" stroke="#F4A261" stroke-width="2.5" fill="none"/>
+  <!-- Left ear -->
+  <polygon points="110,80 95,40 130,70" fill="#E76F51" opacity="0.25"/>
+  <polygon points="110,80 95,40 130,70" stroke="#F4A261" stroke-width="2.5" fill="none" stroke-linejoin="round"/>
+  <polygon points="113,78 102,50 127,72" stroke="#E76F51" stroke-width="1.5" fill="none" opacity="0.6"/>
+  <!-- Right ear -->
+  <polygon points="190,80 205,40 170,70" fill="#E76F51" opacity="0.25"/>
+  <polygon points="190,80 205,40 170,70" stroke="#F4A261" stroke-width="2.5" fill="none" stroke-linejoin="round"/>
+  <polygon points="187,78 198,50 173,72" stroke="#E76F51" stroke-width="1.5" fill="none" opacity="0.6"/>
+  <!-- Eyes -->
+  <ellipse cx="130" cy="115" rx="10" ry="12" stroke="#2A9D8F" stroke-width="2" fill="#2A9D8F" fill-opacity="0.3"/>
+  <ellipse cx="130" cy="112" rx="4" ry="5" fill="white" opacity="0.8"/>
+  <ellipse cx="170" cy="115" rx="10" ry="12" stroke="#2A9D8F" stroke-width="2" fill="#2A9D8F" fill-opacity="0.3"/>
+  <ellipse cx="170" cy="112" rx="4" ry="5" fill="white" opacity="0.8"/>
+  <!-- Nose -->
+  <ellipse cx="150" cy="132" rx="6" ry="4" fill="#E76F51" opacity="0.5"/>
+  <ellipse cx="150" cy="132" rx="6" ry="4" stroke="#E76F51" stroke-width="2" fill="none"/>
+  <!-- Mouth -->
+  <path d="M144 138 Q150 146 156 138" stroke="#E76F51" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <!-- Whiskers -->
+  <line x1="100" y1="128" x2="130" y2="130" stroke="#264653" stroke-width="1.5" stroke-linecap="round" opacity="0.7"/>
+  <line x1="100" y1="138" x2="130" y2="136" stroke="#264653" stroke-width="1.5" stroke-linecap="round" opacity="0.7"/>
+  <line x1="200" y1="128" x2="170" y2="130" stroke="#264653" stroke-width="1.5" stroke-linecap="round" opacity="0.7"/>
+  <line x1="200" y1="138" x2="170" y2="136" stroke="#264653" stroke-width="1.5" stroke-linecap="round" opacity="0.7"/>
+  <!-- Tail with color -->
+  <path d="M220 195 Q240 160 230 130" stroke="#F4A261" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.5"/>
+  <path d="M220 195 Q240 160 230 130" stroke="#E9C46A" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <!-- Color splotch accents -->
+  <circle cx="120" cy="200" r="8" fill="#E9C46A" opacity="0.15"/>
+  <circle cx="175" cy="190" r="6" fill="#2A9D8F" opacity="0.1"/>
+</svg>
