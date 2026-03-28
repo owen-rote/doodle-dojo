@@ -2,6 +2,7 @@ import base64
 import colorsys
 import io
 
+import cv2
 import numpy as np
 from PIL import Image
 
@@ -15,6 +16,10 @@ _GRAY_SATURATION_TOLERANCE = 0.10
 _MIN_PIXELS_PER_GROUP = 20
 _MAX_STROKE_GROUPS = 20
 _DISPLAY_COLOR = np.asarray([0, 0, 0], dtype=np.uint8)
+_MIN_COMPONENT_PIXELS = 4
+_MIN_BORDER_COMPONENT_PIXELS = 18
+_MASK_CLOSE_KERNEL = np.ones((2, 2), dtype=np.uint8)
+_MASK_DILATE_KERNEL = np.ones((2, 2), dtype=np.uint8)
 
 
 def _distance_from_white(colors: np.ndarray) -> np.ndarray:
@@ -161,6 +166,35 @@ def _apply_display_palette(groups: list[dict]) -> list[dict]:
     return recolored_groups
 
 
+def _cleanup_group_mask(mask: np.ndarray) -> np.ndarray:
+    if not mask.any():
+        return mask
+
+    height, width = mask.shape
+    mask_uint8 = (mask.astype(np.uint8)) * 255
+    component_count, labels, stats, _ = cv2.connectedComponentsWithStats(mask_uint8, connectivity=8)
+    cleaned = np.zeros_like(mask_uint8)
+
+    for label in range(1, component_count):
+        x = int(stats[label, cv2.CC_STAT_LEFT])
+        y = int(stats[label, cv2.CC_STAT_TOP])
+        w = int(stats[label, cv2.CC_STAT_WIDTH])
+        h = int(stats[label, cv2.CC_STAT_HEIGHT])
+        area = int(stats[label, cv2.CC_STAT_AREA])
+        touches_border = x == 0 or y == 0 or (x + w) >= width or (y + h) >= height
+        min_pixels = _MIN_BORDER_COMPONENT_PIXELS if touches_border else _MIN_COMPONENT_PIXELS
+        if area < min_pixels:
+            continue
+        cleaned[labels == label] = 255
+
+    if not cleaned.any():
+        return mask
+
+    cleaned = cv2.morphologyEx(cleaned, cv2.MORPH_CLOSE, _MASK_CLOSE_KERNEL)
+    cleaned = cv2.dilate(cleaned, _MASK_DILATE_KERNEL, iterations=1)
+    return cleaned > 0
+
+
 def split_sketch_by_color(img: Image.Image) -> list[str]:
     """Return one transparent PNG data URL per perceived stroke color.
 
@@ -203,6 +237,7 @@ def split_sketch_by_color(img: Image.Image) -> list[str]:
     layer_urls: list[str] = []
     for group_index, group in enumerate(color_groups):
         mask = flat_group_indexes.reshape(height, width) == group_index
+        mask = _cleanup_group_mask(mask)
         if not mask.any():
             continue
 

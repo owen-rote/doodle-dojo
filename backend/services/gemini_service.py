@@ -28,12 +28,14 @@ async def ingest_reference_image(request: IngestReferenceImageRequest) -> Image.
     prompt = (
         "Use this picture to create a beginner dotted stroke guide. "
         "Each stroke must be a different color. "
+        "Use bold, saturated colors for the dots, never pale, pastel, faded, translucent, or low-contrast colors. "
         "Draw strokes using dots only. "
         "Do not connect dots with lines. "
         "Do not draw outlines, curves, sketch lines, shadows, glow, texture, or gradients. "
         "Each stroke should appear only as separated, clearly visible, filled circular dots. "
-        "Keep the background plain white. "
-        "Do not include the background in the stroke colors. "
+        "Keep only the main subject and remove the background entirely. "
+        "Keep the background plain white and empty. "
+        "Do not include the background in the stroke colors or the dot plan. "
         "Do NOT add any numbers, labels, arrows, or text."
     )
 
