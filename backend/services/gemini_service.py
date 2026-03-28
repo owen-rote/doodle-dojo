@@ -23,8 +23,8 @@ async def autocomplete_stroke(request: AutocompleteStrokeRequest) -> Autocomplet
 
 async def get_strokes_from_reference(request: AutocompleteStrokeRequest) -> list[str]:
     """
-    Takes reference image + optional current drawing from React frontend,
-    returns list of stroke variation images (as data URLs).
+    Takes reference image
+    returns list of stroke variation images (as base64 data URLs).
     """
     contents = []
 
@@ -34,21 +34,14 @@ async def get_strokes_from_reference(request: AutocompleteStrokeRequest) -> list
 
     contents.append(types.Part.from_bytes(data=image_bytes, mime_type=mime_type))
 
-    # Add current drawing context if provided
-    if request.current_drawing_base64:
-        drawing_bytes = base64.b64decode(extract_base64_data(request.current_drawing_base64))
-        drawing_mime = detect_image_mime_type(drawing_bytes)
-
-        contents.append(types.Part.from_bytes(data=drawing_bytes, mime_type=drawing_mime))
-        prompt = "Generate stroke variation suggestions based on the reference and current drawing. Keep style consistent."
-    else:
-        prompt = "Generate stroke/line variation suggestions from this reference image."
+    # TODO make good
+    prompt = "Generate stroke/line variation suggestions from this reference image."
 
     contents.insert(0, prompt)
 
     # Call Gemini to generate variations
     response = await client.aio.models.generate_content(
-        model="gemini-2.0-flash",
+        model="gemini-2.0-flash", #TODO nano banana
         contents=contents,
         config=types.GenerateContentConfig(
             response_modalities=["IMAGE"],
