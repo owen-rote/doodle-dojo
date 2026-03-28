@@ -56,7 +56,7 @@ def save_grid(layers: dict[int, np.ndarray], output_path: Path, title: str) -> N
         visible = layer[layer[..., 3] > 0]
         colors = np.unique(visible[:, :3], axis=0) if len(visible) else np.empty((0, 3), dtype=np.uint8)
         color = tuple(int(channel) for channel in colors[0]) if len(colors) else None
-        preview = np.full((layer.shape[0], layer.shape[1], 3), 24, dtype=np.uint8)
+        preview = np.full((layer.shape[0], layer.shape[1], 3), 255, dtype=np.uint8)
         alpha = layer[..., 3:4].astype(np.float32) / 255.0
         preview = (preview * (1.0 - alpha) + layer[..., :3] * alpha).astype(np.uint8)
         axes[row, col].imshow(preview)
@@ -87,7 +87,7 @@ def dilate_mask(mask: np.ndarray, iterations: int = 2) -> np.ndarray:
     return expanded
 
 
-def build_visible_preview(layer: np.ndarray, background_value: int = 24, dilation_iterations: int = 2) -> np.ndarray:
+def build_visible_preview(layer: np.ndarray, background_value: int = 245, dilation_iterations: int = 2) -> np.ndarray:
     mask = layer[..., 3] > 0
     thick_mask = dilate_mask(mask, iterations=dilation_iterations)
     preview = np.full((layer.shape[0], layer.shape[1], 4), 0, dtype=np.uint8)

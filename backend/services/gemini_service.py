@@ -33,6 +33,7 @@ async def ingest_reference_image(request: IngestReferenceImageRequest) -> Image.
         "Do not draw outlines, curves, sketch lines, shadows, glow, texture, or gradients. "
         "Each stroke should appear only as separated, clearly visible, filled circular dots. "
         "Keep the background plain white. "
+        "Do not include the background in the stroke colors. "
         "Do NOT add any numbers, labels, arrows, or text."
     )
 

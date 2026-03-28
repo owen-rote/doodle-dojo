@@ -14,31 +14,7 @@ _GRAY_VALUE_TOLERANCE = 0.14
 _GRAY_SATURATION_TOLERANCE = 0.10
 _MIN_PIXELS_PER_GROUP = 20
 _MAX_STROKE_GROUPS = 20
-_DISPLAY_PALETTE = np.asarray(
-    [
-        [255, 0, 0],
-        [0, 200, 0],
-        [0, 110, 255],
-        [255, 140, 0],
-        [180, 0, 255],
-        [0, 220, 220],
-        [255, 0, 170],
-        [200, 220, 0],
-        [255, 255, 0],
-        [0, 255, 120],
-        [255, 80, 80],
-        [80, 80, 255],
-        [255, 0, 255],
-        [0, 255, 255],
-        [255, 180, 0],
-        [120, 255, 0],
-        [255, 0, 90],
-        [120, 0, 255],
-        [0, 170, 255],
-        [255, 60, 0],
-    ],
-    dtype=np.uint8,
-)
+_DISPLAY_COLOR = np.asarray([0, 0, 0], dtype=np.uint8)
 
 
 def _distance_from_white(colors: np.ndarray) -> np.ndarray:
@@ -178,9 +154,9 @@ def _merge_groups_to_max(
 
 def _apply_display_palette(groups: list[dict]) -> list[dict]:
     recolored_groups: list[dict] = []
-    for index, group in enumerate(groups):
+    for group in groups:
         recolored_group = dict(group)
-        recolored_group["display_color"] = _DISPLAY_PALETTE[index % len(_DISPLAY_PALETTE)]
+        recolored_group["display_color"] = _DISPLAY_COLOR
         recolored_groups.append(recolored_group)
     return recolored_groups
 
