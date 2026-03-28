@@ -10,7 +10,6 @@ interface CanvasSnapshot {
 interface CanvasState {
   activeTool: DrawingTool;
   brushSize: number;
-  brushColor: string;
   fillColor: string;
   userStrokes: Stroke[];
   currentStroke: number[];
@@ -36,7 +35,6 @@ interface CanvasState {
 export const useCanvasStore = create<CanvasState>((set, get) => ({
   activeTool: "pen",
   brushSize: 3,
-  brushColor: "#1F2937",
   fillColor: "#1F2937",
   userStrokes: [],
   currentStroke: [],

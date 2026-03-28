@@ -32,8 +32,9 @@ export default function SessionHeader({
       <header className="flex h-14 items-center justify-between rounded-full border border-white/10 bg-white/5 px-5 backdrop-blur-sm">
         {/* Left: Logo + Title */}
         <div className="flex items-center gap-3 text-[14px]">
+          <img src="/logo.svg" alt="DoodleDojo" className="h-6 w-6 rounded-full" />
           <span className="bg-gradient-to-r from-purple-400 to-violet-400 bg-clip-text font-semibold text-transparent">
-            bloom
+            DoodleDojo
           </span>
           <span className="text-white/20">|</span>
           <span className="text-white/50">{sessionTitle}</span>

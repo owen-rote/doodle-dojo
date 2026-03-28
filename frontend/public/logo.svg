@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <defs>
+    <!-- Gemini-style gradient: Google blue → purple → pink -->
+    <linearGradient id="gem" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4285F4"/>
+      <stop offset="40%" stop-color="#886FEE"/>
+      <stop offset="100%" stop-color="#D96570"/>
+    </linearGradient>
+    <linearGradient id="pencil" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#4285F4"/>
+      <stop offset="100%" stop-color="#886FEE"/>
+    </linearGradient>
+    <linearGradient id="tip" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FBBC04"/>
+      <stop offset="100%" stop-color="#F4A900"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <circle cx="256" cy="256" r="256" fill="#0a0a0f"/>
+
+  <!-- Gemini 4-point sparkle (behind pencil) -->
+  <g transform="translate(256,230)">
+    <!-- Vertical beam -->
+    <ellipse cx="0" cy="0" rx="8" ry="80" fill="url(#gem)" opacity="0.5"/>
+    <!-- Horizontal beam -->
+    <ellipse cx="0" cy="0" rx="80" ry="8" fill="url(#gem)" opacity="0.5"/>
+    <!-- Center glow -->
+    <circle cx="0" cy="0" r="18" fill="url(#gem)" opacity="0.25"/>
+  </g>
+
+  <!-- Pencil (tilted, drawing position) -->
+  <g transform="translate(256,256) rotate(-40) translate(-256,-256)">
+    <!-- Shaft -->
+    <rect x="232" y="120" width="36" height="190" rx="4" fill="url(#pencil)"/>
+    <!-- Grip band 1 -->
+    <rect x="228" y="290" width="44" height="6" rx="2" fill="#4285F4" opacity="0.5"/>
+    <!-- Grip band 2 -->
+    <rect x="228" y="300" width="44" height="6" rx="2" fill="#886FEE" opacity="0.4"/>
+    <!-- Tip cone -->
+    <polygon points="232,310 268,310 250,365" fill="#DADCE0"/>
+    <!-- Tip point -->
+    <polygon points="242,345 258,345 250,365" fill="url(#tip)"/>
+    <!-- Eraser -->
+    <rect x="232" y="110" width="36" height="18" rx="4" fill="#EA4335"/>
+    <!-- Ferrule -->
+    <rect x="230" y="126" width="40" height="6" rx="1" fill="#C5C5C5" opacity="0.6"/>
+  </g>
+
+  <!-- Small Gemini sparkles around pencil tip area -->
+  <!-- Sparkle 1 (blue) -->
+  <g transform="translate(330,310)">
+    <ellipse rx="2.5" ry="12" fill="#4285F4" opacity="0.8"/>
+    <ellipse rx="12" ry="2.5" fill="#4285F4" opacity="0.8"/>
+  </g>
+  <!-- Sparkle 2 (yellow) -->
+  <g transform="translate(355,280)">
+    <ellipse rx="2" ry="9" fill="#FBBC04" opacity="0.7"/>
+    <ellipse rx="9" ry="2" fill="#FBBC04" opacity="0.7"/>
+  </g>
+  <!-- Sparkle 3 (green) -->
+  <g transform="translate(310,345)">
+    <ellipse rx="1.5" ry="7" fill="#34A853" opacity="0.6"/>
+    <ellipse rx="7" ry="1.5" fill="#34A853" opacity="0.6"/>
+  </g>
+  <!-- Sparkle 4 (red, small) -->
+  <g transform="translate(350,340)">
+    <ellipse rx="1.5" ry="6" fill="#EA4335" opacity="0.5"/>
+    <ellipse rx="6" ry="1.5" fill="#EA4335" opacity="0.5"/>
+  </g>
+</svg>

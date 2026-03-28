@@ -3,7 +3,7 @@ export default function Hero() {
     <div className="flex flex-col items-center">
       {/* Title Pill */}
       <div className="rounded-full bg-gray-800 px-8 py-3 text-[16px] font-medium text-white">
-        AI Drawing Coach
+        DoodleDojo
       </div>
 
       {/* Tagline Card */}
@@ -12,7 +12,7 @@ export default function Hero() {
           Turn ideas into art
         </p>
         <p className="mt-1 text-[14px] text-text-secondary">
-          Your AI coach guides every stroke
+          Your dojo for learning to draw
         </p>
       </div>
     </div>

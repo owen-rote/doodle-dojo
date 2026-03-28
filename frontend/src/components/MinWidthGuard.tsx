@@ -45,7 +45,7 @@ export default function MinWidthGuard({ children }: { children: React.ReactNode 
           Desktop or Tablet Required
         </h1>
         <p className="mt-3 max-w-md text-sm text-text-secondary">
-          AI Drawing Coach works best on larger screens. Please switch to a laptop or tablet
+          DoodleDojo works best on larger screens. Please switch to a laptop or tablet
           for the full drawing experience.
         </p>
       </div>

@@ -44,10 +44,8 @@ function Navbar() {
     <nav className="fixed top-0 z-50 w-full border-b border-white/5 bg-[#0a0a0f]/80 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
         <div className="flex items-center gap-2">
-          <svg className="h-5 w-5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Z" />
-          </svg>
-          <span className="text-lg font-bold text-white">DrawCoach</span>
+          <img src="/logo.svg" alt="DoodleDojo" className="h-8 w-8 rounded-full" />
+          <span className="text-lg font-bold text-white">DoodleDojo</span>
         </div>
 
         <div className="hidden items-center gap-8 text-sm text-gray-400 lg:flex">
@@ -90,7 +88,7 @@ function HeroSection() {
         </h1>
 
         <p className="hero-fadein hero-delay-2 mx-auto mt-6 max-w-xl text-lg leading-relaxed text-gray-400">
-          Upload any image or describe what you want to draw. Our AI coach guides you stroke by stroke with live voice feedback.
+          Upload any image or describe what you want to draw. DoodleDojo guides you stroke by stroke with live voice feedback.
         </p>
 
         <div className="hero-fadein hero-delay-3 mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
@@ -123,7 +121,7 @@ const loadingMessages = [
   { text: "Tracing the outlines...", icon: "pen" },
   { text: "Mapping every curve...", icon: "curve" },
   { text: "Generating stroke guides...", icon: "brush" },
-  { text: "Teaching the AI coach...", icon: "brain" },
+  { text: "Setting the vibe...", icon: "brain" },
   { text: "Warming up the canvas...", icon: "canvas" },
   { text: "Almost there...", icon: "rocket" },
 ];
@@ -251,7 +249,7 @@ function LoadingScreen({ progress, messageIndex }: { progress: number; messageIn
           <svg className="h-4 w-4 text-purple-400/50" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Z" />
           </svg>
-          DrawCoach
+          DoodleDojo
         </div>
       </div>
     </div>
@@ -373,9 +371,9 @@ function StartDrawingSection() {
 
         // Wait for backend stroke extraction and store the result
         const uploadRes = await fetch("/api/upload-reference", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ image: data.image, mimeType: data.mimeType }),
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ image: data.image, mimeType: data.mimeType }),
         });
         if (uploadRes.ok) {
           const uploadData = await uploadRes.json() as {
@@ -717,6 +715,24 @@ const steps = [
       </svg>
     ),
   },
+  {
+    title: "Vibe music",
+    desc: "AI analyzes your image and generates ambient music to set the mood while you sketch.",
+    icon: (
+      <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="m9 9 10.5-3m0 6.553v3.75a2.25 2.25 0 0 1-1.632 2.163l-1.32.377a1.803 1.803 0 1 1-.99-3.467l2.31-.66a2.25 2.25 0 0 0 1.632-2.163Zm0 0V2.25L9 5.25v10.303m0 0v3.75a2.25 2.25 0 0 1-1.632 2.163l-1.32.377a1.803 1.803 0 0 1-.99-3.467l2.31-.66A2.25 2.25 0 0 0 9 15.553Z" />
+      </svg>
+    ),
+  },
+  {
+    title: "Animate with Veo",
+    desc: "Turn your finished sketch into a live video with Google Veo 3.",
+    icon: (
+      <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="m15.75 10.5 4.72-4.72a.75.75 0 0 1 1.28.53v11.38a.75.75 0 0 1-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25h-9A2.25 2.25 0 0 0 2.25 7.5v9a2.25 2.25 0 0 0 2.25 2.25Z" />
+      </svg>
+    ),
+  },
 ];
 
 function HowItWorks() {
@@ -756,7 +772,7 @@ function HowItWorks() {
           How it works
         </h2>
 
-        <div className="grid gap-6 lg:grid-cols-3">
+        <div className="grid gap-6 md:grid-cols-3 lg:grid-cols-5">
           {steps.map((step, i) => (
             <div
               key={step.title}
@@ -814,7 +830,7 @@ function Footer() {
           <svg className="h-4 w-4 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Z" />
           </svg>
-          DrawCoach &copy; {new Date().getFullYear()}
+          DoodleDojo &copy; {new Date().getFullYear()}
         </div>
         <div className="flex gap-6 text-sm text-gray-500">
           <a href="#how-it-works" className="transition hover:text-gray-300">How it Works</a>
