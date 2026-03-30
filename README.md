@@ -16,6 +16,9 @@ Most people want to draw better, but tutorials are either too generic, too long,
 6. If coach voice is off, the user can prompt Lyria with lyrics or vibe guidance and let music play while they draw.
 7. At the end, the user can animate the sketch with Veo and save the result.
 
+## Diagram
+![Diagram](readme_resources/diagram.png)
+
 ## Stroke Extraction Algorithm
 See [backend/notebooks/stroke_extraction.ipynb](backend/notebooks/stroke_extraction.ipynb)
 for details on the stroke extraction and clustering algorithm.
