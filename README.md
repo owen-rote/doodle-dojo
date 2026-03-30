@@ -16,6 +16,12 @@ Most people want to draw better, but tutorials are either too generic, too long,
 6. If coach voice is off, the user can prompt Lyria with lyrics or vibe guidance and let music play while they draw.
 7. At the end, the user can animate the sketch with Veo and save the result.
 
+## Stroke Extraction Algorithm
+See [backend/notebooks/stroke_extraction.ipynb](backend/notebooks/stroke_extraction.ipynb)
+for details on the stroke extraction and clustering algorithm.
+
+![Architecture](readme_resources/stroke-clustering.png)
+
 ## Tech Stack
 
 - Frontend: `Next.js 16`, `React 19`, `TypeScript`, `Tailwind CSS 4`, `Framer Motion`, `Konva`, `Zustand`
@@ -32,6 +38,7 @@ doodledojo/
 
 ## Running Locally
 
+### Backend
 ```bash
 # Install uv (if you don't have it)
 curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -42,23 +49,19 @@ uv sync
 # Create backend/.env with GEMINI_API_KEY=xyz
 
 uv run uvicorn main:app --reload
+
+# Docs hosted at http://localhost:8000/docs
 ```
 
-#### Backend docs will be available at:
-
-[localhost:8000/docs](localhost:8000/docs)
-
-### 3. Run the frontend
+### Frontend
 
 ```bash
 cd frontend
 npm install
 npm run dev
+
+# Available at http://localhost:3000
 ```
-
-#### Frontend will be available at:
-
-[localhost:3000](http://localhost:3000)
 
 ## Environment Variables
 
