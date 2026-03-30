@@ -6,14 +6,6 @@ Most people want to draw better, but tutorials are either too generic, too long,
 
 ![Demo](readme_resources/demo.gif)
 
-## This repo contains:
-
-- a `Next.js` frontend for the drawing experience
-- a `FastAPI` backend for reference processing and stroke-guide generation
-- Gemini integrations for sketch generation and live coaching
-- Veo integration for sketch-to-video animation
-- Lyria integration for prompted background music while drawing
-
 ## How It Works
 
 1. The user uploads an image or types a prompt.
@@ -24,6 +16,12 @@ Most people want to draw better, but tutorials are either too generic, too long,
 6. If coach voice is off, the user can prompt Lyria with lyrics or vibe guidance and let music play while they draw.
 7. At the end, the user can animate the sketch with Veo and save the result.
 
+## Tech Stack
+
+- Frontend: `Next.js 16`, `React 19`, `TypeScript`, `Tailwind CSS 4`, `Framer Motion`, `Konva`, `Zustand`
+- Backend: `google-genai`, `FastAPI`, `Python 3.12`, `uv`
+- Gemini: `Nano Banana 2`, `Lyria 3 Pro preview`, `Gemini 3.1`, `Veo 3.1`
+
 ## Project Structure
 
 ```text
@@ -32,21 +30,18 @@ doodledojo/
 └── frontend/   # Next.js app for the drawing experience
 ```
 
-## Tech Stack
-
-- Frontend: `Next.js 16`, `React 19`, `TypeScript`, `Tailwind CSS 4`, `Framer Motion`, `Konva`, `Zustand`
-- Backend: `google-genai`, `FastAPI`, `Python 3.12`, `uv`
-- Gemini: `Nano Banana 2`, `Lyria 3 Pro preview`, `Gemini 3.1`, `Veo 3.1`
-
 ## Running Locally
 
 ```bash
+# Install uv (if you don't have it)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
 cd backend
 uv sync
 
 # Create backend/.env with GEMINI_API_KEY=xyz
 
-uv run uvicorn main:app --reload --host 0.0.0.0 --port 8000
+uv run uvicorn main:app --reload
 ```
 
 #### Backend docs will be available at:
