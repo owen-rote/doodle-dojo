@@ -5,7 +5,6 @@ Doodle Dojo turns any photo or text idea into guided sketching lessons, gives li
 Most people want to draw better, but tutorials are either too generic, too long, or not interactive. Beginners need feedback in the moment, not after they finish.
 
 ![Demo](readme_resources/demo.gif)
-![Pikachu Animation](readme_resources/pikachu_video.gif)
 
 ## This repo contains:
 
