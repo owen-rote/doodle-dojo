@@ -1,4 +1,4 @@
-### Draw with DoodleDojo
+# Draw with DoodleDojo
 
 Doodle Dojo turns any photo or text idea into guided sketching lessons, gives live AI coaching while you draw, and then animates your final sketch into a short video.
 
