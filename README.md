@@ -1,4 +1,4 @@
-### Draw with DoodleDojo 
+### Draw with DoodleDojo
 
 Doodle Dojo turns any photo or text idea into guided sketching lessons, gives live AI coaching while you draw, and then animates your final sketch into a short video.
 
@@ -14,17 +14,15 @@ Most people want to draw better, but tutorials are either too generic, too long,
 - Veo integration for sketch-to-video animation
 - Lyria integration for prompted background music while drawing
 
+## How It Works
 
-
-## What It Does
-
-- Converts a text prompt or uploaded image into a clean simplified sketch.
-- Breaks the sketch into stroke-by-stroke guidance.
-- Shows the current guide overlay on the canvas while the user draws.
-- Gives live Gemini coach feedback during the drawing session.
-- Lets the user export the sketch as a PNG.
-- Lets the user animate the finished sketch into a short Veo video and save the MP4.
-- Lets the user enter lyrics or a music vibe prompt for Lyria music generation while drawing when coach voice is off.
+1. The user uploads an image or types a prompt.
+2. The Gemini generates a simplified sketch for reference.
+3. That sketch is sent to the backend for stroke-guide processing.
+4. As the user finishes strokes, the app advances through the guide sequence and updates progress.
+5. Gemini Live can provide feedback while the user draws.
+6. If coach voice is off, the user can prompt Lyria with lyrics or vibe guidance and let music play while they draw.
+7. At the end, the user can animate the sketch with Veo and save the result.
 
 ## Project Structure
 
@@ -40,16 +38,6 @@ doodledojo/
 - Backend: `google-genai`, `FastAPI`, `Python 3.12`, `uv`
 - Gemini: `Nano Banana 2`, `Lyria 3 Pro preview`, `Gemini 3.1`, `Veo 3.1`
 
-## How It Works
-
-1. The user uploads an image or types a prompt.
-2. The Gemini generates a simplified sketch for reference.
-3. That sketch is sent to the backend for stroke-guide processing.
-4. As the user finishes strokes, the app advances through the guide sequence and updates progress.
-5. Gemini Live can provide feedback while the user draws.
-6. If coach voice is off, the user can prompt Lyria with lyrics or vibe guidance and let music play while they draw.
-7. After the final stroke, the user can animate the sketch with Veo and save the result.
-
 ## Running Locally
 
 ```bash
@@ -62,6 +50,7 @@ uv run uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 #### Backend docs will be available at:
+
 [localhost:8000/docs](localhost:8000/docs)
 
 ### 3. Run the frontend
@@ -73,10 +62,10 @@ npm run dev
 ```
 
 #### Frontend will be available at:
+
 [localhost:3000](http://localhost:3000)
 
 ## Environment Variables
-
 
 Create `frontend/.env.local`:
 
