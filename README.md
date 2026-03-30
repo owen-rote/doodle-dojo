@@ -14,8 +14,8 @@ This repo contains:
 
 ## Demo
 
+![Demo](readme_resources/demo.gif)
 ![Pikachu Animation](readme_resources/pikachu_video.gif)
-
 
 
 ## What It Does
@@ -39,42 +39,32 @@ doodledojo/
 ## Tech Stack
 
 - Frontend: `Next.js 16`, `React 19`, `TypeScript`, `Tailwind CSS 4`, `Framer Motion`, `Konva`, `Zustand`
-- Backend: `FastAPI`, `Python 3.12`, `uv`, `google-genai`
+- Backend: `google-genai`, `FastAPI`, `Python 3.12`, `uv`
 - Gemini: `Nano Banana 2`, `Lyria 3 Pro preview`, `Gemini 3.1`, `Veo 3.1`
 
 ## How It Works
 
-1. The user starts from the frontend and either uploads an image or types a prompt.
-2. The frontend asks Gemini to generate a simplified sketch.
+1. The user uploads an image or types a prompt.
+2. The Gemini generates a simplified sketch for reference.
 3. That sketch is sent to the backend for stroke-guide processing.
-4. The session view loads and displays the current guide overlay on the canvas.
-5. As the user finishes strokes, the app advances through the guide sequence and updates progress.
-6. Gemini Live can provide feedback while the user draws.
-7. If coach voice is off, the user can prompt Lyria with lyrics or vibe guidance and let music play while they draw.
-8. After the final stroke, the user can animate the sketch with Veo and save the result.
+4. As the user finishes strokes, the app advances through the guide sequence and updates progress.
+5. Gemini Live can provide feedback while the user draws.
+6. If coach voice is off, the user can prompt Lyria with lyrics or vibe guidance and let music play while they draw.
+7. After the final stroke, the user can animate the sketch with Veo and save the result.
 
-## Local Development
-
-### 1. Clone and install
-
-```bash
-git clone <your-repo-url>
-cd doodledojo
-```
-
-### 2. Run the backend
+## Running Locally
 
 ```bash
 cd backend
 uv sync
+
+# Create backend/.env with GEMINI_API_KEY=xyz
+
 uv run uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-Backend docs will be available at:
-
-```text
-http://localhost:8000/docs
-```
+#### Backend docs will be available at:
+[localhost:8000/docs](localhost:8000/docs)
 
 ### 3. Run the frontend
 
@@ -84,23 +74,11 @@ npm install
 npm run dev
 ```
 
-Frontend will be available at:
-
-```text
-http://localhost:3000
-```
+#### Frontend will be available at:
+[localhost:3000](http://localhost:3000)
 
 ## Environment Variables
 
-### Backend
-
-Create `backend/.env`:
-
-```bash
-GEMINI_API_KEY=your_api_key_here
-```
-
-### Frontend
 
 Create `frontend/.env.local`:
 
@@ -128,18 +106,3 @@ Frontend API routes:
 - `/api/coaching`
 - `/api/tts`
 - `/api/animate-sketch`
-
-Backend entrypoint:
-
-- `backend/main.py`
-
-## Current Highlights
-
-- Finished-sketch Veo animation flow is built into the session UI.
-- Live guide overlays advance stroke by stroke.
-- PNG export is supported from the drawing session.
-- Lyria soundtrack support can be steered with lyric or vibe prompts while drawing.
-
-
-
-
