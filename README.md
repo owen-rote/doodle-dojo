@@ -4,7 +4,10 @@ Doodle Dojo turns any photo or text idea into guided sketching lessons, gives li
 
 Most people want to draw better, but tutorials are either too generic, too long, or not interactive. Beginners need feedback in the moment, not after they finish.
 
-This repo contains:
+![Demo](readme_resources/demo.gif)
+![Pikachu Animation](readme_resources/pikachu_video.gif)
+
+## This repo contains:
 
 - a `Next.js` frontend for the drawing experience
 - a `FastAPI` backend for reference processing and stroke-guide generation
@@ -12,10 +15,6 @@ This repo contains:
 - Veo integration for sketch-to-video animation
 - Lyria integration for prompted background music while drawing
 
-## Demo
-
-![Demo](readme_resources/demo.gif)
-![Pikachu Animation](readme_resources/pikachu_video.gif)
 
 
 ## What It Does
